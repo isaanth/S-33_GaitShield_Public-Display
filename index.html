@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0e1411">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,7 +17,6 @@
 
 <header class="masthead">
   <div class="wrap">
-    <p class="eyebrow">Engineering Innovation Challenge 2026 · Working prototype</p>
     <h1>GaitShield</h1>
     <p class="lede">A smart insole that scores fall risk while you walk, and reads the gait changes that show up before cognitive decline does.</p>
   </div>
@@ -39,33 +38,18 @@
     <h2 class="section-title">The build</h2>
     <p class="section-note">Left insole, control pod opened. Tap a marker to name the part.</p>
 
-    <figure class="plate">
-      <div class="stage" id="stage">
-        <img id="photo" src="prototype.jpg" width="1200" height="1600"
-             alt="GaitShield prototype: a black foam insole with three flat pressure sensors and a wiring loom, connected to an opened 3D-printed pod holding a lithium battery and an ESP32 board.">
-        <div class="pins" id="pins"></div>
-      </div>
-      <figcaption>Photographed as assembled, no renders.</figcaption>
-    </figure>
-
-    <ol class="parts" id="parts"></ol>
-
-    <details class="calib">
-      <summary>Label calibration</summary>
-      <div class="calib-body">
-        <p class="calib-help">Turn this on, drag any marker on the photo, and the coordinates below update live. Positions save in this browser.</p>
-        <label class="switch">
-          <input type="checkbox" id="calib-toggle">
-          <span>Markers draggable</span>
-        </label>
-        <pre class="coords" id="coords" aria-live="polite"></pre>
-        <div class="calib-actions">
-          <button class="btn" id="copy-coords">Copy coordinates</button>
-          <button class="btn btn-quiet" id="reset-coords">Reset to defaults</button>
+    <div class="plate-row">
+      <figure class="plate">
+        <div class="stage">
+          <img src="prototype.jpg" width="1200" height="1600"
+               alt="GaitShield prototype: a black foam insole with three flat pressure sensors and a wiring loom, connected to an opened 3D-printed pod holding a lithium battery and an ESP32 board.">
+          <div class="pins" id="pins"></div>
         </div>
-        <p class="calib-status" id="calib-status" role="status"></p>
-      </div>
-    </details>
+        <figcaption>Photographed as assembled, no renders.</figcaption>
+      </figure>
+
+      <aside class="detail" id="detail" aria-live="polite"></aside>
+    </div>
 
     <h3 class="sub-title">How the insole works</h3>
     <ul class="beats">
@@ -84,7 +68,7 @@
     <p class="section-note">Flutter, Android and iOS. Connects straight to the insole over BLE.</p>
 
     <ol class="pipeline">
-      <li><span class="step">Insole</span><span class="detail">FSR ×3 plus IMU, 28-byte BLE packet</span></li>
+      <li><span class="step">Insole</span><span class="detail">FSR &times;3 plus IMU, 28-byte BLE packet</span></li>
       <li><span class="step">Features</span><span class="detail">Centre of pressure, sway, cadence, stride variability, asymmetry, gait phase</span></li>
       <li><span class="step">Scoring</span><span class="detail">Fall Risk Index, smoothed and normalised against the wearer's own baseline</span></li>
       <li><span class="step">Response</span><span class="detail">Haptic alert, session report, supervisor dashboard</span></li>
