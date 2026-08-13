@@ -185,6 +185,18 @@ body {
   aspect-ratio: 1200 / 1600;
 }
 
+.stage video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #000;
+}
+
+.demo {
+  max-width: 420px;
+  margin: 0 0 4px;
+}
+
 .plate figcaption {
   margin-top: 8px;
   font-size: 13px;
