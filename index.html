@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GaitShield Prototype</title>
+<meta name="description" content="GaitShield: a smart insole that scores fall risk in real time and screens for early cognitive decline through gait. Prototype build and app details.">
+<meta name="theme-color" content="#0e1411">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="wrap">
+    <h1>GaitShield</h1>
+    <p class="lede">A smart insole that scores fall risk while you walk, and reads the gait changes that show up before cognitive decline does.</p>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Prototype sections">
+  <div class="wrap">
+    <div class="tablist" role="tablist">
+      <button class="tab" role="tab" id="tab-hardware" aria-controls="panel-hardware" aria-selected="true">Hardware</button>
+      <button class="tab" role="tab" id="tab-software" aria-controls="panel-software" aria-selected="false" tabindex="-1">Software</button>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+
+  <section class="panel wrap" id="panel-hardware" role="tabpanel" aria-labelledby="tab-hardware">
+
+    <h2 class="section-title">The build</h2>
+    <p class="section-note">Left insole, control pod opened. Tap a marker to name the part.</p>
+
+    <div class="plate-row">
+      <figure class="plate">
+        <div class="stage">
+          <img src="prototype.jpg" width="1200" height="1600"
+               alt="GaitShield prototype: a black foam insole with three flat pressure sensors and a wiring loom, connected to an opened 3D-printed pod holding a lithium battery and an ESP32 board.">
+          <div class="pins" id="pins"></div>
+        </div>
+        <figcaption>Photographed as assembled, no renders.</figcaption>
+      </figure>
+
+      <aside class="detail" id="detail" aria-live="polite"></aside>
+    </div>
+
+    <h3 class="sub-title">How the insole works</h3>
+    <ul class="beats">
+      <li><b>Three pressure sensors</b> under heel, ball and toe track how weight moves across the foot, at 50 samples a second.</li>
+      <li><b>A six-axis IMU</b> measures sway and tilt at 100 Hz, and catches a fall outright from the impact signature.</li>
+      <li><b>An ESP32 fuses both</b> into a Fall Risk Index from 0 to 100, then streams a 28-byte packet over Bluetooth Low Energy.</li>
+      <li><b>Feedback stays on the foot.</b> High risk buzzes the wearer before the phone is ever involved.</li>
+      <li><b>Every session starts calibrated</b>, with 30 seconds of standing still setting that wearer's baseline.</li>
+    </ul>
+
+  </section>
+
+  <section class="panel wrap" id="panel-software" role="tabpanel" aria-labelledby="tab-software" hidden>
+
+    <h2 class="section-title">The app</h2>
+    <p class="section-note">Flutter, Android and iOS. Connects straight to the insole over BLE.</p>
+
+    <figure class="plate demo">
+      <div class="stage">
+        <video controls playsinline preload="metadata">
+          <source src="GaitShield-App-Demo.mp4" type="video/mp4">
+          Your browser cannot play this video.
+          <a href="GaitShield-App-Demo.mp4">Download the demo (MP4)</a>.
+        </video>
+      </div>
+      <figcaption>Screen recording of the app running against a live insole.</figcaption>
+    </figure>
+
+    <ol class="pipeline">
+      <li><span class="step">Insole</span><span class="detail">FSR &times;3 plus IMU, 28-byte BLE packet</span></li>
+      <li><span class="step">Features</span><span class="detail">Centre of pressure, sway, cadence, stride variability, asymmetry, gait phase</span></li>
+      <li><span class="step">Scoring</span><span class="detail">Fall Risk Index, smoothed and normalised against the wearer's own baseline</span></li>
+      <li><span class="step">Response</span><span class="detail">Haptic alert, session report, supervisor dashboard</span></li>
+    </ol>
+
+    <h3 class="sub-title">What it does</h3>
+    <div class="cards">
+      <article class="card">
+        <h4>Live fall risk</h4>
+        <p>A 0 to 100 index with three bands (safe, caution, high risk), alongside the pressure split across four foot zones.</p>
+      </article>
+      <article class="card">
+        <h4>Cognitive screening</h4>
+        <p>A dual-task walk: count backwards while you walk. Gait that degrades under mental load is an early marker of decline, and the app scores that drop.</p>
+      </article>
+      <article class="card">
+        <h4>Personal baseline</h4>
+        <p>Opt-in learning of each wearer's own gait, so risk is judged against how <em>they</em> normally walk, not a population average.</p>
+      </article>
+      <article class="card">
+        <h4>Fall detection</h4>
+        <p>Impact and free-fall signatures in the IMU trigger an alert on their own, independent of the risk score.</p>
+      </article>
+      <article class="card">
+        <h4>Supervisor view</h4>
+        <p>A carer or clinician links to the wearer and sees sessions, risk trends and alerts as they sync.</p>
+      </article>
+      <article class="card">
+        <h4>Session reports</h4>
+        <p>Every walk is archived with its full feature set, exportable as CSV or PDF for a clinic visit.</p>
+      </article>
+    </div>
+
+    <h3 class="sub-title">Models, measured</h3>
+    <p class="section-note">Accuracy on held-out data the models never trained on.</p>
+    <div class="table-scroll">
+      <table class="data">
+        <caption class="sr-only">Held-out accuracy for each model in the GaitShield pipeline</caption>
+        <thead>
+          <tr><th scope="col">Model</th><th scope="col">Task</th><th scope="col">Accuracy</th><th scope="col">Macro-F1</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Activity 1D-CNN</th><td>5-class activity</td><td>98.3%</td><td>0.978</td></tr>
+          <tr><th scope="row">FRI MLP</th><td>3-class fall risk</td><td>95.0%</td><td>0.950</td></tr>
+          <tr><th scope="row">RandomForest</th><td>UCI HAR baseline</td><td>92.5%</td><td>n/a</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="footnote">The activity model runs on the phone at 23.6 KB and 0.022 ms per window, tested on a subject-disjoint split of the UCI HAR dataset, so no subject appears in both training and test.</p>
+
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
