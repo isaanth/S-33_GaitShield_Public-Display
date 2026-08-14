@@ -1,10 +1,5 @@
 <title>GaitShield Weight Browser</title>
 <style>
-/* ── Tokens ────────────────────────────────────────────────────────────────
-   Light is the base layer; dark redefines only the token values, three times
-   over, so the page resolves in all three viewer states (explicit light,
-   explicit dark, and the un-stamped system default). No component below
-   reaches for a raw color. */
 :root {
   --bg: #EBF0EA;
   --surface: #F6F9F5;
@@ -16,9 +11,9 @@
   --ink-3: #74837A;
   --accent: #35735A;
   --accent-soft: #E2ECE5;
-  --neg: #4F6BA8;   /* diverging cool pole  — negative weights */
-  --pos: #B06E3C;   /* diverging warm pole  — positive weights */
-  --mid: #D8DED8;   /* neutral midpoint     — zero */
+  --neg: #4F6BA8;
+  --pos: #B06E3C;
+  --mid: #D8DED8; 
   --shadow: 0 1px 2px rgba(20, 32, 26, .06), 0 4px 16px rgba(20, 32, 26, .04);
 }
 @media (prefers-color-scheme: dark) {
