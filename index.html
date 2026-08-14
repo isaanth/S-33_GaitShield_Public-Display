@@ -1,140 +1,922 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GaitShield Prototype</title>
-<meta name="description" content="GaitShield: a smart insole that scores fall risk in real time and screens for early cognitive decline through gait. Prototype build and app details.">
-<meta name="theme-color" content="#0e1411">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-</head>
-<body>
+<title>GaitShield Weight Browser</title>
+<style>
+/* ── Tokens ────────────────────────────────────────────────────────────────
+   Light is the base layer; dark redefines only the token values, three times
+   over, so the page resolves in all three viewer states (explicit light,
+   explicit dark, and the un-stamped system default). No component below
+   reaches for a raw color. */
+:root {
+  --bg: #EBF0EA;
+  --surface: #F6F9F5;
+  --card: #FFFFFF;
+  --border: #D3DCD4;
+  --border-strong: #B4C2B7;
+  --ink: #14201A;
+  --ink-2: #46554C;
+  --ink-3: #74837A;
+  --accent: #35735A;
+  --accent-soft: #E2ECE5;
+  --neg: #4F6BA8;   /* diverging cool pole  — negative weights */
+  --pos: #B06E3C;   /* diverging warm pole  — positive weights */
+  --mid: #D8DED8;   /* neutral midpoint     — zero */
+  --shadow: 0 1px 2px rgba(20, 32, 26, .06), 0 4px 16px rgba(20, 32, 26, .04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1411; --surface: #131A16; --card: #18211C;
+    --border: #28342D; --border-strong: #3B4A41;
+    --ink: #E7EDE8; --ink-2: #B7C3BA; --ink-3: #87958B;
+    --accent: #7BAE92; --accent-soft: #1C2A22;
+    --neg: #8C9CC9; --pos: #C4906A; --mid: #38443D;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1411; --surface: #131A16; --card: #18211C;
+  --border: #28342D; --border-strong: #3B4A41;
+  --ink: #E7EDE8; --ink-2: #B7C3BA; --ink-3: #87958B;
+  --accent: #7BAE92; --accent-soft: #1C2A22;
+  --neg: #8C9CC9; --pos: #C4906A; --mid: #38443D;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+}
 
-<a class="skip" href="#main">Skip to content</a>
+/* Mono carries the instrument: labels, values, headings. Sans is reserved for
+   running prose. Both are local stacks — the artifact CSP blocks font CDNs, and
+   a silent webfont fallback would be worse than a chosen stack. */
+:root {
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono",
+          "Roboto Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --cell: 14px;  /* overridden per-view by the size control */
+}
 
-<header class="masthead">
-  <div class="wrap">
-    <h1>GaitShield</h1>
-    <p class="lede">A smart insole that scores fall risk while you walk, and reads the gait changes that show up before cognitive decline does.</p>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.eyebrow {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .14em;
+  color: var(--ink-3); font-weight: 600;
+}
+.num { font-variant-numeric: tabular-nums; }
+
+/* ── Masthead ───────────────────────────────────────────────────────────── */
+header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 18px 24px 0;
+}
+.masthead {
+  display: flex; flex-wrap: wrap; gap: 20px 32px;
+  align-items: flex-start; justify-content: space-between;
+  max-width: 1600px; margin: 0 auto;
+}
+h1 { font-size: 17px; font-weight: 600; letter-spacing: -.01em; margin: 4px 0 2px; }
+.sub {
+  font-family: var(--sans); font-size: 12.5px; color: var(--ink-2);
+  max-width: 62ch; margin: 0;
+}
+.stats { display: flex; gap: 26px; }
+.stat .v { font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+.stat .k { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); }
+
+.tabs { display: flex; gap: 2px; max-width: 1600px; margin: 16px auto 0; }
+.tab {
+  font-family: var(--mono); font-size: 12px; cursor: pointer;
+  padding: 9px 16px; border: 1px solid var(--border); border-bottom: none;
+  background: transparent; color: var(--ink-3);
+  border-radius: 4px 4px 0 0; margin-bottom: -1px;
+}
+.tab[aria-selected="true"] {
+  background: var(--bg); color: var(--ink); font-weight: 600;
+  border-color: var(--border); border-bottom: 1px solid var(--bg);
+}
+
+/* ── Frame ──────────────────────────────────────────────────────────────── */
+main {
+  display: grid; grid-template-columns: 236px minmax(0, 1fr) 264px;
+  gap: 20px; max-width: 1600px; margin: 0 auto; padding: 20px 24px 64px;
+  align-items: start;
+}
+@media (max-width: 1180px) { main { grid-template-columns: 220px minmax(0,1fr); } .rail-r { grid-column: 1 / -1; } }
+@media (max-width: 820px)  { main { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 6px; box-shadow: var(--shadow);
+}
+.panel-h {
+  padding: 11px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.sticky { position: sticky; top: 16px; }
+
+/* ── Layer stack (left rail) ────────────────────────────────────────────── */
+.layer {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  font-family: var(--mono); background: transparent; color: inherit;
+  border: none; border-bottom: 1px solid var(--border);
+  border-left: 2px solid transparent; padding: 9px 13px;
+}
+.layer:last-child { border-bottom: none; }
+.layer:hover { background: var(--surface); }
+.layer[aria-current="true"] { background: var(--accent-soft); border-left-color: var(--accent); }
+.layer .lname { font-size: 12px; font-weight: 600; }
+.layer .lmeta { font-size: 10.5px; color: var(--ink-3); display: flex; justify-content: space-between; gap: 8px; }
+.layer.inert .lname { color: var(--ink-3); font-weight: 400; }
+
+/* ── Data-flow strip ────────────────────────────────────────────────────── */
+.flow {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  max-width: 1600px; margin: 14px auto 0; padding-bottom: 2px;
+}
+.fnode {
+  border: 1px solid var(--border); border-radius: 4px; padding: 4px 9px;
+  background: var(--card); line-height: 1.25;
+}
+.fnode .fs { font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fnode .fn { font-size: 9px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-3); }
+.fnode.weighted { border-color: var(--border-strong); }
+.farrow { color: var(--ink-3); font-size: 11px; }
+
+/* ── Overview wall (all layers at once) ─────────────────────────────────── */
+.wall { display: flex; flex-direction: column; gap: 16px; }
+.block { display: flex; flex-direction: column; gap: 6px; }
+.block-h {
+  display: flex; align-items: baseline; gap: 9px;
+  border-bottom: 1px solid var(--border); padding-bottom: 4px;
+}
+.block-h .bt { font-size: 12px; font-weight: 600; }
+.block-h .bm { font-size: 10px; color: var(--ink-3); }
+.tenset { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-start; }
+.tenbox { display: flex; flex-direction: column; gap: 3px; }
+.tenbox .tl { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+
+/* ── Personalisation panel ──────────────────────────────────────────────── */
+:root { --safe: #4E8C68; --caution: #A87C34; --danger: #B0564D; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --safe: #74B08C; --caution: #CDA35C; --danger: #CF7A72; }
+}
+:root[data-theme="dark"] { --safe: #74B08C; --caution: #CDA35C; --danger: #CF7A72; }
+
+.pwrap { display: flex; flex-direction: column; gap: 22px; }
+.psec { display: flex; flex-direction: column; gap: 9px; }
+.psec > h3 { font-size: 12.5px; font-weight: 600; margin: 0; }
+.cap { font-family: var(--sans); font-size: 11px; color: var(--ink-3); margin: 0; max-width: 74ch; line-height: 1.5; }
+.prov {
+  font-size: 10.5px; color: var(--ink-2); padding: 6px 11px;
+  border-left: 2px solid var(--accent); background: var(--accent-soft);
+  border-radius: 0 4px 4px 0;
+}
+.kvrow { display: flex; flex-wrap: wrap; gap: 1px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.kvb { flex: 1 1 92px; background: var(--card); padding: 7px 10px; }
+.kvk { font-size: 9px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-3); }
+.kvv { font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+.reset {
+  font-family: var(--mono); font-size: 10px; cursor: pointer; color: var(--ink-3);
+  background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px;
+}
+.reset:hover { color: var(--ink); border-color: var(--border-strong); }
+.chart { width: 100%; overflow-x: auto; }
+.chart svg { display: block; }
+.axline { stroke: var(--border); stroke-width: 1; }
+.gridline { stroke: var(--border); stroke-width: 1; opacity: .55; }
+.tick { fill: var(--ink-3); font-size: 9.5px; font-family: var(--mono); }
+.serieslbl { font-size: 10px; font-family: var(--mono); font-weight: 600; }
+
+.bandrow { display: flex; align-items: center; gap: 10px; }
+.bandrow .bl { font-size: 10px; color: var(--ink-3); width: 84px; flex: none; text-align: right; }
+.bandbar { flex: 1; display: flex; height: 22px; border-radius: 3px; overflow: hidden; gap: 2px; }
+.bandbar div { display: flex; align-items: center; justify-content: center;
+  font-size: 9.5px; font-weight: 600; color: var(--card); font-variant-numeric: tabular-nums; }
+
+.sliders { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+.sl { display: flex; align-items: center; gap: 7px; }
+.sl label { font-size: 10px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-3); }
+.sl output { font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 34px; }
+
+.consts { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 10.5px; }
+.consts dt { color: var(--ink-3); }
+.consts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+
+
+/* ── Parameter-mass bar in the layer rail ───────────────────────────────── */
+.pbar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; }
+.pbar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+
+/* ── Weight field (center) ──────────────────────────────────────────────── */
+.field { padding: 14px; overflow-x: auto; }
+.tile-wrap { display: flex; flex-wrap: wrap; gap: 14px; }
+.tile { display: flex; flex-direction: column; gap: 4px; }
+.tile-cap { font-size: 9.5px; color: var(--ink-3); letter-spacing: .04em; }
+.grid { display: grid; gap: 1px; width: max-content; }
+.cell {
+  width: var(--cell); height: var(--cell);
+  border-radius: 1px; cursor: crosshair;
+}
+.cell:hover, .cell.pin {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--ink);
+  position: relative; z-index: 2; border-radius: 0;
+}
+.axis-row { display: flex; gap: 1px; margin-top: 3px; }
+.axis-lbl {
+  font-size: 8.5px; color: var(--ink-3); width: var(--cell);
+  text-align: center; overflow: visible; white-space: nowrap;
+  writing-mode: vertical-rl; height: 44px;
+}
+.rowlbls { display: grid; gap: 1px; margin-right: 5px; }
+.rowlbl {
+  font-size: 9px; color: var(--ink-3); height: var(--cell);
+  line-height: var(--cell); text-align: right; white-space: nowrap;
+}
+.matrix-shell { display: flex; align-items: flex-start; }
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+.ctl { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.seg { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.seg button {
+  font-family: var(--mono); font-size: 10.5px; padding: 4px 9px; cursor: pointer;
+  background: transparent; color: var(--ink-3); border: none;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--card); font-weight: 600; }
+input[type=range] { accent-color: var(--accent); width: 84px; }
+
+/* ── Readout + histogram (right rail) ───────────────────────────────────── */
+.readout { padding: 13px 14px; }
+.readout .val {
+  font-size: 26px; font-weight: 600; letter-spacing: -.03em;
+  margin: 2px 0 8px; word-break: break-all;
+}
+.path { font-size: 11px; color: var(--ink-2); line-height: 1.75; }
+.path b { color: var(--ink); font-weight: 600; }
+.swatch {
+  display: inline-block; width: 11px; height: 11px; border-radius: 2px;
+  vertical-align: -1px; margin-right: 5px; border: 1px solid var(--border-strong);
+}
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 11px; }
+.kv span:first-child { color: var(--ink-3); }
+.hist { display: flex; align-items: flex-end; gap: 1px; height: 56px; margin: 8px 0 3px; }
+.hbar { flex: 1; min-height: 1px; border-radius: 1px 1px 0 0; }
+.hax { display: flex; justify-content: space-between; font-size: 9px; color: var(--ink-3); }
+
+.legend-bar { height: 9px; border-radius: 2px; margin: 7px 0 3px; }
+.note { font-family: var(--sans); font-size: 11.5px; color: var(--ink-3); line-height: 1.55; }
+footer {
+  max-width: 1600px; margin: 0 auto; padding: 0 24px 48px;
+  font-family: var(--sans); font-size: 11.5px; color: var(--ink-3);
+}
+</style>
+
+<header>
+  <div class="masthead">
+    <div>
+      <div class="eyebrow">GaitShield · on-device inference</div>
+      <h1 id="mTitle"></h1>
+      <p class="sub" id="mDesc"></p>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v num" id="sParams"></div><div class="k">parameters</div></div>
+      <div class="stat"><div class="v num" id="sLayers"></div><div class="k">weighted layers</div></div>
+      <div class="stat"><div class="v num" id="sSize"></div><div class="k">on flash</div></div>
+    </div>
   </div>
+  <!-- Data-flow strip: the real tensor shape at every stage of the graph. -->
+  <div class="flow" id="flow"></div>
+  <div class="tabs" id="tabs" role="tablist"></div>
 </header>
 
-<nav class="tabs" aria-label="Prototype sections">
-  <div class="wrap">
-    <div class="tablist" role="tablist">
-      <button class="tab" role="tab" id="tab-hardware" aria-controls="panel-hardware" aria-selected="true">Hardware</button>
-      <button class="tab" role="tab" id="tab-software" aria-controls="panel-software" aria-selected="false" tabindex="-1">Software</button>
+<main>
+  <!-- Layer stack -->
+  <div class="panel sticky rail-l">
+    <div class="panel-h"><span class="eyebrow">Layer stack</span><span class="eyebrow" id="ioShape"></span></div>
+    <div id="layers"></div>
+  </div>
+
+  <!-- Weight field -->
+  <div class="panel">
+    <div class="panel-h" style="flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;font-weight:600" id="fTitle"></div>
+        <div class="eyebrow" id="fSub" style="margin-top:2px"></div>
+      </div>
+      <div class="ctl">
+        <div class="seg" id="segTensor"></div>
+        <div class="seg">
+          <button id="cvSqrt" aria-pressed="true">√ scale</button>
+          <button id="cvLin" aria-pressed="false">linear</button>
+        </div>
+        <div class="seg">
+          <button id="scT" aria-pressed="true">per-tensor</button>
+          <button id="scM" aria-pressed="false">per-model</button>
+        </div>
+        <label class="eyebrow" style="display:flex;align-items:center;gap:5px">
+          size <input type="range" id="cellSize" min="7" max="26" value="14">
+        </label>
+      </div>
+    </div>
+    <div class="field" id="field"></div>
+  </div>
+
+  <!-- Readout -->
+  <div class="panel sticky rail-r">
+    <div class="panel-h"><span class="eyebrow">Readout</span><span class="eyebrow" id="pinHint">hover a cell</span></div>
+    <div class="readout">
+      <div class="eyebrow">weight value</div>
+      <div class="val num" id="rVal">—</div>
+      <div class="path" id="rPath"><span class="note">Point at any cell to resolve it to an exact
+        parameter. Click to pin.</span></div>
+
+      <div style="margin-top:16px" class="eyebrow">Tensor distribution</div>
+      <div class="hist" id="hist"></div>
+      <div class="hax"><span class="num" id="hMin"></span><span>0</span><span class="num" id="hMax"></span></div>
+
+      <div style="margin-top:14px" class="eyebrow">Scale</div>
+      <div class="legend-bar" id="legend"></div>
+      <div class="hax"><span class="num" id="lMin"></span><span>0</span><span class="num" id="lMax"></span></div>
+
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+        <div class="kv"><span>mean</span><b class="num" id="tMean"></b></div>
+        <div class="kv"><span>std dev</span><b class="num" id="tStd"></b></div>
+        <div class="kv"><span>min</span><b class="num" id="tMin"></b></div>
+        <div class="kv"><span>max</span><b class="num" id="tMax"></b></div>
+        <div class="kv"><span>rendered</span><b class="num" id="tCount"></b></div>
+      </div>
     </div>
   </div>
-</nav>
-
-<main id="main">
-
-  <section class="panel wrap" id="panel-hardware" role="tabpanel" aria-labelledby="tab-hardware">
-
-    <h2 class="section-title">The build</h2>
-    <p class="section-note">Left insole, control pod opened. Tap a marker to name the part.</p>
-
-    <div class="plate-row">
-      <figure class="plate">
-        <div class="stage">
-          <img src="prototype.jpg" width="1200" height="1600"
-               alt="GaitShield prototype: a black foam insole with three flat pressure sensors and a wiring loom, connected to an opened 3D-printed pod holding a lithium battery and an ESP32 board.">
-          <div class="pins" id="pins"></div>
-        </div>
-        <figcaption>Photographed as assembled, no renders.</figcaption>
-      </figure>
-
-      <aside class="detail" id="detail" aria-live="polite"></aside>
-    </div>
-
-    <h3 class="sub-title">How the insole works</h3>
-    <ul class="beats">
-      <li><b>Three pressure sensors</b> under heel, ball and toe track how weight moves across the foot, at 50 samples a second.</li>
-      <li><b>A six-axis IMU</b> measures sway and tilt at 100 Hz, and catches a fall outright from the impact signature.</li>
-      <li><b>An ESP32 fuses both</b> into a Fall Risk Index from 0 to 100, then streams a 28-byte packet over Bluetooth Low Energy.</li>
-      <li><b>Feedback stays on the foot.</b> High risk buzzes the wearer before the phone is ever involved.</li>
-      <li><b>Every session starts calibrated</b>, with 30 seconds of standing still setting that wearer's baseline.</li>
-    </ul>
-
-  </section>
-
-  <section class="panel wrap" id="panel-software" role="tabpanel" aria-labelledby="tab-software" hidden>
-
-    <h2 class="section-title">The app</h2>
-    <p class="section-note">Flutter, Android and iOS. Connects straight to the insole over BLE.</p>
-
-    <figure class="plate demo">
-      <div class="stage">
-        <video controls playsinline preload="metadata">
-          <source="https://res.cloudinary.com/fux3gmvj/video/upload/v1786667764/Screen_Recording_20260814_082557.mp4" type="video/mp4">
-          Your browser cannot play this video.
-          <a href="GaitShield-App-Demo.mp4">Download the demo (MP4)</a>.
-        </video>
-        
-      </div>
-      <figcaption>Screen recording of the app onboarding and pairing</figcaption>
-    </figure>
-
-    <ol class="pipeline">
-      <li><span class="step">Insole</span><span class="detail">FSR &times;3 plus IMU, 28-byte BLE packet</span></li>
-      <li><span class="step">Features</span><span class="detail">Centre of pressure, sway, cadence, stride variability, asymmetry, gait phase</span></li>
-      <li><span class="step">Scoring</span><span class="detail">Fall Risk Index, smoothed and normalised against the wearer's own baseline</span></li>
-      <li><span class="step">Response</span><span class="detail">Haptic alert, session report, supervisor dashboard</span></li>
-    </ol>
-
-    <h3 class="sub-title">What it does</h3>
-    <div class="cards">
-      <article class="card">
-        <h4>Live fall risk</h4>
-        <p>A 0 to 100 index with three bands (safe, caution, high risk), alongside the pressure split across four foot zones.</p>
-      </article>
-      <article class="card">
-        <h4>Cognitive screening</h4>
-        <p>A dual-task walk: count backwards while you walk. Gait that degrades under mental load is an early marker of decline, and the app scores that drop.</p>
-      </article>
-      <article class="card">
-        <h4>Personal baseline</h4>
-        <p>Opt-in learning of each wearer's own gait, so risk is judged against how <em>they</em> normally walk, not a population average.</p>
-      </article>
-      <article class="card">
-        <h4>Fall detection</h4>
-        <p>Impact and free-fall signatures in the IMU trigger an alert on their own, independent of the risk score.</p>
-      </article>
-      <article class="card">
-        <h4>Supervisor view</h4>
-        <p>A carer or clinician links to the wearer and sees sessions, risk trends and alerts as they sync.</p>
-      </article>
-      <article class="card">
-        <h4>Session reports</h4>
-        <p>Every walk is archived with its full feature set, exportable as CSV or PDF for a clinic visit.</p>
-      </article>
-    </div>
-
-    <h3 class="sub-title">Models, measured</h3>
-    <p class="section-note">Accuracy on held-out data the models never trained on.</p>
-    <div class="table-scroll">
-      <table class="data">
-        <caption class="sr-only">Held-out accuracy for each model in the GaitShield pipeline</caption>
-        <thead>
-          <tr><th scope="col">Model</th><th scope="col">Task</th><th scope="col">Accuracy</th><th scope="col">Macro-F1</th></tr>
-        </thead>
-        <tbody>
-          <tr><th scope="row">Activity 1D-CNN</th><td>5-class activity</td><td>98.3%</td><td>0.978</td></tr>
-          <tr><th scope="row">FRI MLP</th><td>3-class fall risk</td><td>95.0%</td><td>0.950</td></tr>
-          <tr><th scope="row">RandomForest</th><td>UCI HAR baseline</td><td>92.5%</td><td>n/a</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="footnote">The activity model runs on the phone at 23.6 KB and 0.022 ms per window, tested on a subject-disjoint split of the UCI HAR dataset, so no subject appears in both training and test.</p>
-
-  </section>
-
 </main>
 
-<script src="app.js"></script>
-</body>
-</html>
+<footer id="foot"></footer>
+
+<script>
+const DATA = {"generated":"extract_weights.py","models":[{"name":"Activity Classifier","file":"activity_classifier.tflite","fileBytes":24120,"description":"1D CNN over a 50-sample sliding window of raw IMU + FSR signal. Classifies the wearer's current activity.","inputShape":[1,50,9],"inputShapeNote":"1 window x 50 timesteps x 9 sensor channels","inputNames":["ax","ay","az","gx","gy","gz","fsrHeel","fsrBall","fsrToe"],"outputNames":["sitting","standing","walking","upstairs","downstairs"],"totalParams":4525,"layers":[{"id":"conv1","type":"Conv1D","label":"Conv1D \u00b7 24 filters \u00b7 kernel 5","detail":"24 filters, each a 5 timestep x 9 channel receptive field","grid":{"mode":"filters","filters":24,"rows":5,"cols":9},"colLabels":["ax","ay","az","gx","gy","gz","fsrHeel","fsrBall","fsrToe"],"tensors":[{"role":"kernel","shape":[24,1,5,9],"shapeNote":"[filters=24, 1, k=5, in=9]","count":1080,"stats":{"min":-0.4323548972606659,"max":0.3547995984554291,"mean":-0.007839695788735062,"std":0.12723614303003208,"absMax":0.4323548972606659,"absP98":0.2912846851348877},"data":[-0.0244994,0.0552602,-0.0626087,-0.0297594,0.00328325,-0.160793,-0.248885,-0.228001,-0.022305,-0.209211,0.112342,-0.0429388,-0.0677144,0.110387,-0.0173279,-0.00673675,-0.0583703,0.0252563,-0.0186725,0.18372,0.128756,-0.0749843,0.039437,-0.0525745,-0.0614435,-0.00669859,-0.0354676,-0.194535,0.143437,-0.0705433,-0.102358,-0.118905,0.145161,0.0445234,-0.22168,-0.132022,-0.145476,0.0557421,-0.0467912,0.167725,-0.00970047,-0.0509686,0.0454438,-0.160945,-0.124014,-0.142858,0.204503,0.0262913,0.0231151,0.0759274,-0.228199,-0.117702,-0.0266591,0.0143676,-0.175079,-0.0571501,0.0589735,0.0306414,0.150597,-0.202877,-0.18704,-0.0367045,-0.0146003,0.0757104,0.0704051,-0.0846271,-0.00601551,0.134033,-0.0353093,-0.0358471,-0.0256281,-0.0239827,-0.111699,0.0590192,-0.181345,-0.0778656,0.0445319,-0.267354,0.0327002,-0.125774,-0.077552,0.126009,0.168291,0.0893917,0.0332397,-0.0415239,0.0646585,-0.0945544,-0.0865895,-0.157727,0.159478,-0.00643682,0.136423,0.0227793,0.128927,0.327761,0.0563251,0.034512,-0.0392069,0.216732,0.062721,0.0319996,-0.0956858,0.0284605,0.129452,-0.0766607,0.10193,-0.0148396,-0.0355557,-0.235429,-0.0134295,0.088713,0.0170325,0.262512,0.00898993,-0.153087,0.0304618,0.24451,-0.214557,0.0981216,0.0346289,0.0137581,0.0165291,-0.108281,-0.013367,0.000575546,-0.187768,-0.212046,0.000536313,0.0259656,0.0199289,0.0959074,0.0702671,-0.0692614,-0.117882,-0.293449,0.0550628,0.274016,-0.0111036,0.0495953,-0.0286146,-0.00311691,-0.021228,-0.0993796,-0.261823,0.0834087,-0.122769,0.0865879,0.0891464,-0.0838539,0.0412521,-0.0153278,0.000764215,0.114116,-0.195742,-0.21598,-0.0220932,0.0847888,0.0484673,0.0404537,-0.123301,-0.00684501,0.295195,-0.153571,-0.161706,0.00477435,0.0324713,-0.00508709,-0.11393,0.0409457,0.0365455,0.233999,0.0910766,0.235583,-0.00311387,-0.0341934,-0.14013,-0.0380821,0.00131054,-0.0585981,-0.201616,0.0790991,-0.0335777,-0.0790317,0.0512535,-0.126833,0.105143,0.0165625,0.0302516,-0.222179,-0.0517798,-0.032546,-0.0159116,-0.10655,-0.285175,-0.078054,0.178438,0.0595831,0.225242,-0.01361,-0.114878,0.0956165,0.194648,-0.0661124,-0.00976337,-0.136027,-0.0724148,0.237275,-0.160231,0.122279,0.212963,0.0445035,0.128034,0.146743,0.180668,0.178487,0.258692,0.0843145,-0.123546,0.0501953,0.195155,0.0881621,0.0545003,0.0866843,0.049546,-0.170207,0.000100837,0.150355,-0.0219564,-0.0664978,-0.0841359,-0.031823,0.194954,0.0585205,-0.206269,-0.0438964,-0.136955,0.0377181,0.147097,-0.0901305,-0.00981317,-0.0466468,0.0366959,-0.00201695,-0.125727,-0.155468,-0.116776,0.186832,-0.0887569,-0.0142642,-0.166847,0.0222646,-0.270463,0.0678956,-0.0287951,-0.0306992,0.237483,-0.0929979,0.0960884,0.161351,0.0517377,-0.141406,-0.129141,0.0897751,-0.13803,0.267447,-0.175298,0.116437,-0.00281614,-0.0130712,0.0644346,0.141517,-0.0557929,0.190574,-0.0507751,-0.282247,-0.0224412,0.0161984,-0.00974678,0.246579,-0.0688364,0.0729731,-0.0825819,0.341474,0.163527,-0.0601077,-0.149772,0.134838,0.131657,-0.220735,-0.117813,-0.0693634,0.320153,-0.118682,0.0270108,0.105322,-0.150345,-0.00413936,-0.259603,-0.0683285,0.190198,0.227605,-0.0987752,0.0760124,0.0977312,0.0568331,0.0157067,-0.115216,0.0469452,-0.0740452,0.00604767,-0.0865985,-0.00797295,-0.168024,0.135592,0.176714,-0.0456409,0.109058,0.00134382,0.109971,-0.103057,-0.0221368,-0.0728162,-0.238185,0.0912915,0.0596102,0.0304503,0.195177,-0.132346,0.0581367,-0.0732278,0.00874165,-0.267401,0.0611811,0.137378,-0.136916,0.117736,-0.140566,0.124236,0.0349044,0.0872566,-0.273763,-0.190681,-0.0411844,0.118763,0.0402306,0.0354676,-0.0417133,-0.101577,-0.150941,-0.247038,0.0459425,0.00443221,0.00527834,-0.150321,-0.0146077,-0.0789785,-0.159786,-0.0463136,-0.263248,0.10022,-0.173624,0.0755916,-0.0795166,0.0190398,-0.0854124,0.0795597,-0.153132,0.0232331,0.168069,-0.217051,-0.084827,0.11998,-0.0380267,-0.172335,0.0672941,0.102413,-0.124433,-0.0878379,0.142254,0.0074151,-0.0216467,-0.0537497,-0.344469,-0.0328142,0.146963,-0.0294998,0.0723782,-0.110536,-0.0658204,0.218185,0.0951905,-0.199597,0.133912,-0.17834,-0.0607964,-0.0934376,0.137718,0.00451834,-0.0778938,0.231344,-0.327402,-0.176488,0.138755,-0.0430043,-0.0331854,0.00579538,-0.166194,0.0438804,0.171083,0.0473479,-0.0511803,0.112162,0.199827,-0.00229443,-0.193711,-0.0717258,0.145037,-0.127682,-0.0350271,0.0308277,-0.0255142,-0.0473788,0.264326,-0.0856278,0.0649386,0.0126523,0.0954086,0.0271808,0.0438378,-0.036448,0.103754,0.0370961,-0.165812,0.160148,-0.00100516,0.0791162,0.135581,0.0749007,0.0870618,0.0981097,0.121605,0.164237,0.0326624,0.0105385,0.017926,-0.0873752,0.0210008,0.110058,0.116289,0.227713,0.0845353,-0.0301417,0.192005,0.0880575,0.205284,-0.113166,0.0858142,-0.0799428,-0.0664604,0.0264938,0.125423,0.226845,0.0510721,0.0113831,0.113458,-0.0272986,-0.0936005,0.276662,0.210315,0.0267775,-0.0487261,-0.124169,0.0932628,-0.00937341,-0.103923,0.132519,-0.0551319,-0.251562,-0.0151097,-0.0465123,-0.115478,-0.116766,-0.066628,-0.0456293,0.129593,-0.321431,-0.1333,-0.0837712,0.119685,0.192341,0.0282136,0.0189386,0.150952,-0.0809708,0.0255407,0.0998313,0.12259,-0.0473409,0.154003,-0.204441,-0.159207,-0.0240323,-0.181541,-0.0167407,0.00205986,-0.183031,-0.165923,0.158615,0.153208,0.0727867,-0.0641357,-0.124864,-0.254913,0.0490626,0.00137472,-0.345565,0.245554,0.142023,-0.011021,-0.0797135,-0.174857,-0.217459,-0.00379993,0.150438,-0.0280612,0.0843075,0.350173,0.11752,-0.045269,0.0318092,-0.0114842,-0.160633,0.0314086,-0.150808,-0.146605,-0.0530583,-0.148927,0.0654729,-0.112255,-0.0100043,0.231127,-0.103016,-0.203495,0.0263555,-0.0158946,-0.135182,-0.0829274,0.0367613,0.0083834,0.291286,-0.015983,0.0456138,0.0248702,0.0214946,0.111235,-0.0704609,-0.0991606,0.00151659,0.270679,0.0383339,-0.0636651,0.0105198,0.0640165,-0.0819087,-0.0658146,0.108136,0.260682,0.0376106,-0.225065,-0.0919675,-0.0268024,0.0708016,-0.149541,-0.0162411,-0.0879457,0.0781333,0.129545,-0.187284,0.0965116,-0.131204,0.003572,0.0745934,0.10966,-0.0611463,-0.113377,0.175067,-0.0145315,0.066699,0.0485375,-0.10746,-0.132118,-0.00868323,0.00389816,-0.165108,-0.154216,-0.0377493,0.246817,-0.0775678,-0.0824736,-0.0255132,-0.0833096,0.0285606,0.114431,-0.179094,0.102946,0.307113,0.0682906,-0.0546668,-0.0338413,-0.079597,-0.143968,0.0431262,-0.120665,0.00363028,0.169827,0.0491061,-0.167772,-0.0385003,-0.0903376,-0.110721,-0.0894071,0.176299,0.153199,0.0510636,0.123864,-0.124338,0.0634068,0.0983682,0.0858591,-0.0893292,0.00458002,0.184373,-0.0838362,0.0692321,0.0202715,0.023011,0.1051,-0.0557649,0.188439,-0.154381,-0.149621,-0.201561,-0.225452,-0.0418069,0.13774,-0.0698139,0.140852,0.0207204,-0.176663,-0.189552,0.0796702,0.0180386,-0.147222,-0.0596314,0.0829114,0.0184846,0.154171,0.192138,0.196203,0.0420924,-0.23286,-0.0518748,-0.0120109,0.0115418,0.127228,0.181763,0.0756417,-0.0724045,-0.0540001,0.00657462,-0.22741,0.190929,0.0845538,0.0655367,0.0374916,0.107616,0.154067,-0.171513,0.00958648,0.033553,-0.144067,0.0413536,-0.162285,0.113867,-0.095112,0.0299022,-0.0643414,-0.0449538,0.0229154,-0.104102,-0.162594,-0.210488,-0.0377081,-0.000651164,-0.128878,-0.108085,-0.154071,-0.151438,-0.0818017,-0.14398,-0.219184,-0.0567848,-0.187789,-0.124574,-0.0676874,-0.0890557,0.0538105,0.00259605,-0.147632,-0.142162,0.151421,-0.202669,-0.0872271,0.00263626,-0.132348,-0.056569,-0.0736974,-0.163276,-0.13398,-0.0198181,0.119193,-0.169669,0.0368865,-0.0171328,0.183698,-0.122565,-0.122031,-0.179948,0.0211987,0.115189,0.101094,-0.193169,0.145155,0.108669,0.0973761,0.0586596,0.044924,-0.119981,0.16013,-0.0838651,-0.19102,0.0777833,0.192781,-0.100063,-0.0513485,-0.0338582,-0.106553,0.171341,-0.0503245,-0.149333,0.174061,0.0810232,-0.136381,-0.155129,0.0233832,0.0755991,-0.065864,-0.107346,-0.149671,0.0917761,-0.171597,0.122507,-0.117602,-0.0779763,0.0300947,0.0236504,0.0437209,0.24338,-0.0313239,0.349647,-0.0249979,-0.0122519,-0.0890877,-0.0816283,0.266064,-0.0555619,0.0557492,-0.00378864,0.0695993,-0.0874136,-0.115303,0.116606,0.0537155,-0.0461182,-0.16103,-0.130004,-0.0826381,-0.322053,0.0318939,-0.0876388,-0.106856,0.135946,0.095709,0.163613,-0.12902,-0.0373368,-0.428392,0.034214,0.101261,0.0405511,-0.053961,-0.212175,-0.0612821,0.06171,0.230747,0.0786349,-0.044167,-0.0760454,0.0143155,-0.108267,0.195624,0.0561773,-0.219287,-0.0264586,-0.255583,-0.138165,0.157995,-0.0225993,0.26565,-0.0845938,-0.168388,0.210707,0.0448996,-0.128875,0.0882358,0.0883018,0.0349717,0.0147487,0.0959096,0.125644,-0.123432,-0.0485818,-0.125839,-0.0243936,-0.165272,-0.192872,-0.0504619,-0.0876648,-0.197428,0.132787,-0.0537431,0.00864215,0.0060748,-0.162625,-0.0994945,0.259849,-0.182321,0.00137031,0.098799,0.0861698,0.156373,0.0350874,0.0508598,-0.100769,-0.160408,0.0253237,-0.115712,-0.111469,0.110374,0.0916213,-0.0731424,0.109806,0.0201969,0.141171,-0.103167,0.101143,-0.160842,-0.291284,-0.372556,0.0513783,0.116219,-0.0368146,-0.0749904,-0.0994827,0.0407263,-0.0245672,-0.311462,-0.111489,0.0580763,-0.144449,-0.142595,0.0886447,-0.106914,0.00369528,0.152609,0.0494547,0.0973851,-0.0299464,-0.146885,0.0374206,0.226737,0.163488,0.190456,0.0562456,0.284428,0.201935,-0.070654,-0.0365039,-0.0490583,0.287581,-0.0212462,0.0568536,0.147053,-0.0134398,-0.169584,0.142178,0.0813745,0.175261,0.27022,0.14851,-0.0762768,-0.0885422,0.06796,-0.186129,0.0406292,0.0704677,0.0568967,0.171709,-0.040454,-0.104444,-0.0277921,0.224032,0.153158,0.0205975,-0.0358179,-0.038572,-0.0847304,0.00639342,0.0858773,-0.0322316,-0.0143895,0.312938,-0.0777094,0.145756,-0.0876077,-0.0406708,0.0508532,0.0850922,-0.0989676,-0.0680965,0.3548,0.165374,0.121234,-0.0963146,0.173732,-0.116609,0.150676,-0.0731778,-0.432355,-0.0019293,0.0570107,0.0691669,0.00448049,-0.0653384,-0.143357,-0.0273123,-0.126115,-0.211805,-0.207683,-0.127253,-0.166094,-0.0662444,-0.100224,-0.0185985,0.119486,-0.145326,-0.117437,-0.0231083,0.00601255,0.13056,0.05601,-0.132822,0.192663,0.0412502,-0.0789938,-0.120114,-0.391216,0.0375514,0.0754462,0.116816,0.111353,0.192652,-0.168393,0.0317601,-0.045448,-0.255415,0.0463828,-0.124405,-0.194676,0.0650652,0.0886296,-0.052285,0.0377828,-0.138354,-0.0751894,-0.182658,-0.0873641,-0.103418,-0.155615,-0.206774,0.0514502,-0.0210278,0.0744107,0.0564207,-0.189063,-0.176817,-0.21354,0.145275,-0.0439181,-0.0992752,-0.0339722,-0.137043,-0.0597606,-0.167741,-0.158655,-0.092003,0.0642135,0.0404621,0.0306185,0.0181166,0.00854172,-0.0346202,-0.156548,-0.0443355,-0.0751502,-0.157182,-0.0582717,0.0860622,0.0877333,-0.13499,-0.0971503,-0.176456,-0.0405427,-0.0497386,0.174735,0.149265,0.190288,0.060274,-0.121414,-0.142669,-0.106431,0.111321,0.0100297,-0.128112,-0.0368574,0.134872,-0.00343022,-0.156298,-0.00652276,-0.092369,0.133634,0.0838854,-0.205856,-0.0804381,-0.1485,0.00834301,-0.221475,0.284836,0.0567916,-0.125705,0.046942,-0.0851672,-0.00275336,0.0508436,0.0941166,-0.0384448,0.323329,-0.0240939,-0.0800111,0.0155633,0.0292256,0.0545292,0.110601,0.0531467,0.209922,0.0857258,0.122807,-0.00684019,-0.100014]},{"role":"bias","shape":[24],"shapeNote":"[24]","count":24,"stats":{"min":0.0,"max":0.0,"mean":0.0,"std":0.0,"absMax":0.0,"absP98":0.0},"data":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}],"outShape":[50,24]},{"id":"bn1","type":"BatchNorm","label":"BatchNorm \u00b7 24 channels","detail":"folded by the TFLite converter into (x + shift) x scale + offset","grid":{"mode":"strip"},"tensors":[{"role":"shift","shape":[24],"shapeNote":"[24]","count":24,"stats":{"min":-0.27769210934638977,"max":0.09546124190092087,"mean":-0.08617742538141708,"std":0.09771642201750377,"absMax":0.27769210934638977,"absP98":0.2728728920221329},"data":[-0.0715505,-0.134514,-0.277692,-0.255297,-0.0350663,-0.0600466,-0.070749,-0.267216,0.0803623,-0.0158582,-0.0398184,-0.124734,-0.035779,-0.0500281,0.0569302,-0.141246,-0.14153,-0.10369,0.0954612,-0.0105818,-0.125741,-0.146216,-0.180125,-0.0135333]},{"role":"scale","shape":[24],"shapeNote":"[24]","count":24,"stats":{"min":0.9562401175498962,"max":6.525848865509033,"mean":2.2675565307339034,"std":1.1538824469559001,"absMax":6.525848865509033,"absP98":5.397097702026365},"data":[0.95624,1.53012,3.32679,6.52585,1.49416,2.39516,1.66012,1.34108,1.84248,1.65007,3.14038,1.70651,1.76327,2.14385,1.51573,1.66107,1.89243,4.07204,2.12611,3.11217,1.58946,2.98245,1.4941,2.4997]},{"role":"offset","shape":[24],"shapeNote":"[24]","count":24,"stats":{"min":-1.148765206336975,"max":-0.26593470573425293,"mean":-0.6739859965940317,"std":0.20876695885922464,"absMax":1.148765206336975,"absP98":1.0740751588344573},"data":[-0.772089,-0.685926,-0.589384,-0.430684,-0.625535,-0.265935,-0.929491,-0.962619,-0.529769,-0.845289,-0.34868,-0.722068,-0.732788,-0.515728,-0.694682,-1.14877,-0.55476,-0.596281,-0.761274,-0.840633,-0.673348,-0.402151,-0.986396,-0.561389]}],"outShape":[50,24]},{"id":"max_pool_2d7","type":"op","label":"MaxPool1D \u00b7 /2","detail":"no learnable parameters","grid":null,"tensors":[],"outShape":[25,24]},{"id":"conv2","type":"Conv1D","label":"Conv1D \u00b7 32 filters \u00b7 kernel 3","detail":"32 filters, each a 3 timestep x 24 channel receptive field","grid":{"mode":"filters","filters":32,"rows":3,"cols":24},"colLabels":null,"tensors":[{"role":"kernel","shape":[32,1,3,24],"shapeNote":"[filters=32, 1, k=3, in=24]","count":2304,"stats":{"min":-0.3615262508392334,"max":0.3285198509693146,"mean":-0.005195230306755307,"std":0.11689103632082815,"absMax":0.3615262508392334,"absP98":0.23774792134761813},"data":[-0.105746,0.0362222,-0.193445,-0.130655,-0.0959825,-0.115469,0.0811469,-0.141387,0.0287995,0.111419,-0.0202668,0.14218,-0.0309123,-0.0636679,0.156512,0.0192905,-0.188896,0.194574,0.0641636,0.132909,0.0962048,0.0864434,-0.0402409,0.0986332,-0.228977,0.0664195,0.0222232,0.0445599,-0.113085,-0.0326892,0.14208,0.139781,-0.0662245,0.135199,0.12072,-0.0537587,-0.173578,-0.0543593,0.15793,-0.0158261,0.108674,0.183578,0.000338772,0.00935072,0.22638,0.0365256,0.0165531,0.130174,-0.188181,-0.163862,-0.153026,-0.0699959,-0.0139266,-0.0369865,-0.0842672,-0.0774088,0.0425459,0.0423793,0.161733,0.00221441,-0.149788,0.0630036,-0.103736,-0.137216,0.122658,0.182066,-0.118916,0.204001,0.110254,-0.00872153,0.0110448,-0.0540944,-0.0966489,-0.208204,0.0504477,-0.150959,-0.0424426,-0.180998,-0.104281,0.155718,0.0335289,0.0934393,-0.126683,0.15021,-0.177732,-0.0963669,-0.0831262,-0.0955031,0.0125412,-0.019996,0.0145926,0.11131,0.0862725,-0.168025,-0.0954379,-0.0273808,0.152306,-0.11527,-0.00167479,-0.295988,0.07891,-0.018707,0.128192,-0.173101,-0.111793,0.0282244,-0.0305184,0.0337689,-0.0470638,-0.00661017,0.0446203,-0.0897847,-0.166465,0.134575,-0.0644894,0.156224,-0.125676,-0.214556,0.0365277,-0.00392612,0.0309719,0.0558076,-0.265344,-0.16988,-0.0139093,-0.00959906,-0.0883527,-0.115487,0.0950167,0.0397497,0.076534,0.0297263,-0.0102502,-0.0263911,0.0379777,0.165108,-0.25645,0.17152,0.130884,0.169401,-0.0321969,-0.0807809,-0.0971364,-0.095882,-0.0296988,0.0428119,0.0904327,0.00305633,0.0882516,-0.0822446,0.229734,0.16726,-0.123609,0.200586,0.112875,0.00637934,0.00785216,0.125998,-0.0596498,-0.132239,0.0794159,-0.055019,-0.046866,-0.00280353,-0.00940782,0.107595,-0.000710565,0.00203423,0.148375,0.188183,0.00474533,0.0675083,-0.02863,0.0692382,-0.080172,-0.142687,-0.112136,-0.0907151,0.106153,-0.0728742,0.0149724,-0.08868,-0.199946,0.0525154,-0.0509447,0.0270067,0.0577853,0.0232941,0.136341,0.109928,0.0675189,0.184831,-0.109471,0.041099,0.0541511,0.32852,0.0968922,0.181842,-0.0568392,0.0973495,0.00224937,0.275364,0.210714,0.0998401,0.128222,0.122635,-0.135204,0.0862812,0.0631875,-0.025086,-0.151476,-0.102208,-0.146333,-0.105715,0.129697,-0.079801,0.0250304,0.0539779,0.243828,-0.190599,0.0799507,-0.0747842,0.158301,0.14653,0.0288083,-0.1971,0.0488757,-0.224153,-0.105978,-0.150925,0.0478739,0.179765,-0.077265,0.102751,-0.155488,0.0878911,-0.153911,-0.0794885,-0.0184845,-0.261426,-0.0516806,-0.0843695,0.0030183,-0.083778,-0.212927,0.0891398,0.129837,-0.14664,0.168284,0.0220411,0.138848,-0.193608,-0.128246,-0.0448778,-0.0528798,0.135082,0.0474579,0.053227,0.00557641,0.0172681,-0.213137,0.044729,-0.0808836,-0.212394,-0.167587,0.126298,-0.00977293,-0.256621,-0.0563702,0.0861479,0.174505,0.0395832,-0.0277824,-0.0311722,-0.0414448,-0.205357,-0.0839403,-0.0562222,-0.01986,-0.0459437,-0.0206576,0.0616864,-0.0245727,-0.0199371,0.116526,0.0894564,0.133024,-0.040269,0.100408,0.150116,-0.136394,-0.196231,-0.0145307,-0.0911139,0.0442428,0.147421,0.0645453,0.0391979,0.19247,-0.0444841,-0.169349,0.030729,-0.0847554,0.156189,-0.044626,0.072203,0.13137,-0.0775274,-0.00364822,-0.130876,0.0316424,-0.140592,0.0243287,0.0108436,-0.196907,-0.0584094,-0.00725782,0.0741721,0.194793,-0.0877063,-0.00591246,-0.0335816,-0.127336,0.206324,-0.0186406,0.00217812,-0.0445377,-0.102964,-0.00483082,-0.00647515,0.184239,0.0898733,0.0283583,0.12591,-0.0415609,-0.14131,-0.0108706,-0.123495,-0.0802505,-0.135972,-0.151349,-0.0766046,-0.112983,-0.137318,-0.153184,0.195378,-0.276911,0.030881,0.0202335,-0.0112861,-0.141931,-0.0428745,-0.0438977,-0.154961,-0.183472,0.0651537,0.101302,-0.0093589,-0.124231,0.0342497,-0.0669546,-0.135992,0.206369,-0.0290393,0.145667,-0.165683,-0.0998036,-0.0460263,0.062569,0.0546485,0.0201246,-0.20507,0.0223558,0.0196014,-0.123272,0.0571615,-0.0127202,-0.135179,-0.038811,-0.147216,-0.144636,0.174697,-0.0263748,-0.205238,-0.158333,0.087966,0.196883,-0.124495,0.0859405,0.076108,0.213096,-0.174134,0.013839,-0.14788,0.0858774,-0.110626,0.243977,-0.1766,0.00709511,-0.0118655,-0.279028,0.0851025,0.116037,-0.0263977,-0.0311982,0.0767245,-0.143882,-0.138334,-0.0997286,-0.0291252,0.187188,-0.302899,0.023212,0.117399,0.0963619,0.14939,0.104927,0.0780344,0.158593,-0.0449007,0.216195,-0.0236957,-0.00971176,0.163395,0.110998,0.0330377,-0.146051,-0.068245,-0.169194,0.0062645,0.137524,-0.138861,-0.0942181,-0.046943,0.101769,0.131163,-0.0533874,-0.0164873,-0.118525,0.151472,-0.0900783,-0.0557748,0.0318889,0.106655,0.0115073,-0.126657,-0.0236491,-0.0692993,-0.0797435,-0.0365913,-0.137374,0.101806,0.0802629,0.0747876,0.293959,0.0583061,0.140325,0.105694,0.0873713,0.133402,0.142131,0.0179615,-0.196241,0.17302,0.144512,0.0848805,-0.137503,-0.0318191,0.0719838,0.193643,-0.0858556,0.12053,0.0971412,0.0398306,0.213252,-0.116448,-0.0876753,0.0977204,-0.0256041,-0.00787244,0.107929,0.23068,0.0856096,-0.0334209,-0.0948019,0.166031,-0.202626,0.00129493,-0.0298466,0.187463,-0.0678838,0.0860157,0.0277638,-0.0258401,0.0108279,0.130978,0.115814,0.112655,0.0138317,-0.0591811,0.137009,0.0211943,0.255047,-0.114055,0.0390808,-0.0048269,-0.0116218,-0.0901602,0.0481221,0.0475594,0.0215326,0.15899,-0.079744,-0.0154605,-0.131728,-0.0449157,0.00336479,0.0177753,0.0276901,0.154863,-0.0682929,0.00227726,0.131882,0.0729696,0.095623,0.0723936,0.11392,0.0922723,0.0918471,-0.0379629,-0.0810823,-0.0176901,0.125213,-0.0120121,-0.115808,0.237779,-0.131221,-0.0157731,0.00111022,-0.16335,-0.112643,-0.118278,0.00646527,0.2347,0.190314,-0.112325,-0.0161699,-0.00561121,0.0161557,-0.117231,-0.0723539,0.133675,-0.116692,0.167731,-0.0432391,0.224462,0.109414,0.0710667,0.0158286,-0.0352057,0.211191,0.114806,0.0438394,0.185117,0.199721,0.149003,0.285387,0.226699,-0.0175382,-0.04678,0.0313012,0.0575623,0.120883,-0.150756,0.261473,0.0752925,-0.107141,-0.129883,-0.176183,0.0347494,-0.181627,0.021169,-0.0542418,-0.0553288,-0.0209608,0.0443091,0.0278287,0.0606413,-0.0648866,-0.00930353,0.0184455,-0.164598,0.0971339,0.200881,-0.0538269,0.0645477,0.10686,-0.212859,-0.0491212,0.0270185,-0.111308,0.142324,-0.0969195,-0.00283246,0.063236,0.0730437,-0.151289,-0.0301671,-0.00427448,0.126399,0.0895302,0.119557,-0.231478,-0.213268,-0.0752842,0.134017,0.0914816,0.14429,0.0108478,-0.0199188,0.203957,0.0563243,0.080294,-0.135848,0.140777,-0.0930821,-0.146135,-0.0583444,-0.0554717,-0.181488,-0.0253683,0.152838,-0.0142587,0.149428,-0.200286,0.137297,-0.192596,0.0716879,0.126589,-0.103833,-0.0307013,-0.108864,0.075058,0.208299,0.0917776,-0.0634268,-0.158572,-0.0160118,0.0102564,-0.0214641,0.197775,-0.131646,-0.000589808,0.0282696,-0.010224,0.174635,0.065683,-0.0641542,-0.00674407,0.0569735,0.192297,0.124396,0.0345903,0.000447561,-0.203476,-0.122564,-0.102722,-0.183146,0.031338,0.115829,-0.188146,-0.135479,0.00933185,0.206153,0.133761,-0.193521,0.13111,-0.0331594,-0.00485915,-0.147824,0.00227669,-0.0391927,0.00873939,-0.120263,0.132457,0.0943891,0.023434,-0.179322,-0.173106,0.129152,0.13626,-0.11645,-0.000916665,0.016517,-0.158658,-0.242768,-0.0832504,0.196486,0.161524,-0.1543,-0.16458,-0.104668,0.202075,0.0383324,0.148391,0.0534555,0.0412978,0.080766,0.138964,-0.0568182,0.0738427,0.0993436,-0.184683,0.014889,-0.161508,-0.131392,0.0540729,-0.0507231,-0.0961329,-0.0230527,0.185848,0.21195,0.11809,-0.0504968,0.177585,-0.0550022,0.0183194,-0.00346458,0.0600068,-0.100666,0.00051524,0.0401053,0.00287204,0.0408561,-0.120698,-0.106354,0.17322,-0.10309,-0.0436321,0.0924533,0.0959825,0.0170636,0.0527004,0.121543,0.220713,0.195669,0.106336,0.035142,-0.0804464,-0.172901,0.148383,0.133032,-0.0634619,0.0288028,-0.131023,-0.0788625,-0.0779061,-0.168776,0.0108321,-0.0472729,-0.0909579,0.126758,0.152832,0.175039,-0.0755877,0.0474143,0.22697,-0.139214,-0.0231836,0.213528,0.179506,0.00985829,-0.150714,-0.0805256,0.148417,0.196609,0.0531777,0.175763,0.0858357,-0.0248282,0.00532219,0.0306096,-0.150007,-0.0288819,-0.0172617,0.218583,-0.00260758,0.118614,-0.136463,0.0385532,-0.012733,-0.00355937,-0.0824838,-0.0617514,0.0172785,0.0692333,-0.000425349,-0.0894809,-0.165308,0.0516272,0.0423805,-0.0761974,0.00527701,0.0706872,-0.0408559,-0.133703,-0.0548423,-0.0939156,0.151644,0.0460793,-0.084583,-0.154267,0.0873127,0.0511574,0.0291834,0.15436,0.0416513,-0.0195388,-0.204908,0.113096,0.0429163,0.00180526,0.0973637,0.0507546,-0.0754472,-0.144485,-0.137198,-0.0666111,-0.0151914,0.15434,0.0730159,0.107899,0.0526889,0.0458627,0.123939,-0.00313224,0.129672,-0.105076,0.232605,0.0740785,0.18331,0.242185,0.0115171,0.0581817,-0.179728,-0.128878,0.109972,0.168746,0.106136,-0.161386,0.0127508,-0.00796132,0.131365,0.139698,-0.172381,0.195264,0.12953,-0.0542519,0.100764,0.0628293,-0.197782,-0.18478,0.174744,0.153972,-0.0833689,-0.0166158,0.0849351,0.189597,0.137583,0.206095,-0.148813,-0.167433,0.0706501,0.153749,0.064433,-0.172762,-0.0185772,-0.00488327,-0.154573,0.123336,0.135274,-0.155904,-0.0700243,-0.361526,-0.051761,0.203433,-0.0951346,0.0313566,0.161201,-0.17478,-0.0866642,0.196861,-0.105592,-0.059129,0.00863107,-0.126702,-0.106177,-0.079723,-0.0218688,-0.0624094,0.213309,0.121328,0.0841674,0.1379,0.0243989,-0.0883996,0.0233873,-0.0867311,0.0932258,0.155825,-0.129859,-0.0604568,-0.0149212,-0.145081,0.120439,0.114201,0.0631736,0.0259026,0.0857997,-0.181442,0.122297,0.0258681,-0.00213324,-0.0793348,0.184628,0.0768959,-0.000745117,0.00592447,-0.0473941,-0.185876,-0.155547,-0.1839,-0.106984,0.0862743,0.0557739,0.0728472,-0.145981,-0.0908249,0.0646407,-0.112939,-0.0963799,-0.0787754,0.1966,-0.0504951,-0.0789521,0.0896138,0.0509667,-0.0120116,-0.0991886,0.0579014,0.0734565,-0.043042,-0.02059,0.149376,0.0578937,0.196945,0.179008,-0.100854,0.113659,-0.0756196,-0.0106609,-0.0573431,-0.125,-0.19561,-0.114472,0.0107125,-0.0205636,-0.176435,-0.130226,-0.0664204,0.136033,0.224471,0.0790458,-0.0485164,0.17724,-0.199173,-0.120675,0.0777857,-0.0154198,0.204657,0.167789,-0.173008,-0.100629,-0.174574,-0.20138,-0.175029,0.0634954,-0.161414,0.102399,-0.136419,0.188399,0.147602,-0.0830265,-0.0340971,0.0882955,0.00218616,0.0541,0.107465,-0.0845035,0.0669433,0.0202216,0.29684,0.0480988,0.186146,0.0899175,0.0126589,0.0836426,0.0353581,-0.134365,0.199472,0.154863,-0.100241,-0.0739244,-0.201897,0.136384,-0.103636,0.00955529,-0.0396475,-0.0615287,-0.231304,0.123365,-0.013562,-0.039432,0.117165,-0.0830653,0.093943,-0.11667,0.0396413,-0.0651157,0.123338,0.113025,-0.0377271,0.122952,0.0163107,0.322613,-0.0242872,-0.048694,0.0613723,-0.087318,-0.08445,0.1762,0.142574,0.0216392,-0.194272,0.11698,-0.0903824,-0.173247,-0.103558,-0.206508,-0.115194,0.0502475,-0.11297,0.0146905,0.110992,0.059067,-0.320837,0.10043,-0.061697,0.133848,-0.184118,-0.0908523,0.125076,0.0811657,0.0470133,0.0710851,0.150939,0.102843,-0.0761465,-0.0831743,0.0480838,0.0259298,0.0148972,0.0417468,-0.0124205,0.053252,-0.157972,-0.0126311,0.10193,-0.147872,0.0278206,0.11309,-0.177272,-0.00909088,-0.0413009,0.0467431,-0.0225364,-0.0253016,0.0996305,0.214582,0.129512,0.0774891,0.036374,-0.12031,-0.132091,0.032232,-0.153168,0.0352195,0.201623,0.139996,0.058873,0.143546,0.0240142,0.0410702,0.0633607,-0.14396,0.160848,-0.057949,-0.0341819,0.0851715,0.122568,-0.0577445,-0.156883,-0.128684,-0.0607432,-0.0217802,-0.0398313,0.0814465,-0.0261165,-0.0466682,-0.128529,-0.0537831,-0.127915,-0.0791649,-0.0975763,0.0705167,0.195728,-0.0262089,-0.178114,0.00308773,0.180294,0.260708,-0.130211,0.115891,0.0682034,-0.0556582,-0.14899,-0.0678071,0.0476778,-0.0678251,0.0094836,-0.0453825,-0.128532,0.189199,-0.203198,-0.0996517,0.175102,0.167852,0.160978,0.196796,0.153329,0.135734,-0.186739,-0.29615,-0.230848,-0.102921,0.0867932,-0.0120766,-0.173743,0.0145664,0.112024,-0.0821459,-0.0645907,0.0596069,-0.168342,-0.120456,-0.212773,0.166118,-0.158082,0.0937131,0.157662,0.0904817,0.172283,0.0836182,-0.193549,0.0148353,0.151117,-0.175179,-0.216113,-0.220872,0.0239164,0.0930076,-0.13262,0.0299676,-0.101025,0.0833242,-0.025925,0.112197,-0.00424794,-0.330711,-0.0565197,-0.142349,0.161508,0.0438416,0.166243,-0.153712,0.133015,-0.100327,-0.111959,-0.04657,0.0354997,-0.0189798,-0.0322304,-0.0574877,0.0364696,0.0610047,0.0387519,-0.178725,-0.0147928,-0.0601103,-0.178783,-0.052075,-0.052041,-0.119535,0.0954306,0.00832512,0.0323551,-0.0805233,0.129906,0.108797,0.0157323,0.0364748,-0.120901,-0.15164,0.0598861,0.0323897,-0.129297,-0.0569862,-0.084066,-0.209321,0.0868654,-0.17955,0.0713849,-0.0800184,0.113097,0.108055,-0.05912,-0.0711055,-0.165893,0.0672122,0.225152,0.0423284,-0.114388,-0.132754,-0.0338186,0.153569,0.0208797,0.0540837,0.154579,-0.0512353,0.0331368,0.0137925,0.23386,0.10784,0.191409,-0.0990408,-0.0387681,-0.105288,0.132576,0.0768159,0.0402061,0.167081,0.00911328,-0.000176324,0.145468,0.0634225,0.0514273,-0.0305839,-0.00456532,-0.114736,-0.026954,0.0683375,0.0760289,-0.175054,0.000970143,-0.138415,0.186598,0.0632708,0.0709079,0.146801,0.15951,0.0863245,0.0807099,0.0223646,0.0690047,0.0601749,0.189054,0.147685,0.191519,-0.0832768,-0.00821916,-0.0773093,0.0658198,-0.0796257,-0.0851396,0.232464,0.0913204,-0.109103,0.116212,-0.00384206,0.174349,0.149584,0.0475738,0.115577,0.019667,0.0815813,0.168514,-0.107433,-0.17017,0.138461,-0.0732643,0.0109612,-0.105817,0.119887,0.0368969,0.0892731,0.0238675,0.11221,-0.133127,0.185508,0.0752882,0.116515,-0.0241866,-0.0976891,0.248217,-0.0344806,-0.19458,-0.0176949,0.102067,0.0137191,0.075573,0.0418135,0.068388,-0.11061,0.1352,0.119199,0.0755477,0.0194799,0.023296,-0.105497,0.100502,0.0721441,-0.0225336,0.116523,0.0116127,0.137499,-0.171385,-0.19006,-0.0887085,-0.171136,0.110415,-0.0377734,0.0777746,-0.189761,-0.191242,0.0349876,-0.145888,-0.128504,-0.187597,0.0430649,-0.0896717,-0.0721528,-0.113371,-0.0758333,-0.0671851,0.0326322,-0.0433124,0.110766,0.0802641,0.18582,0.0626516,-0.102212,0.0917763,0.129208,-0.220371,0.121644,-0.132998,0.000922837,0.0629899,-0.0228487,0.0663209,0.10676,-0.167393,-0.199536,-0.0747612,-0.158676,-0.0509925,0.035157,0.0434269,0.0990866,0.0237796,-0.178058,-0.0412153,-0.0435455,0.169006,-0.0612668,0.0509477,-0.0852925,-0.175049,0.155074,0.0214849,-0.140254,0.17157,0.0152402,-0.0797731,0.0591421,0.105212,-0.157402,-0.0140985,-0.0618769,0.0613371,0.00437511,0.0621216,-0.0590588,-0.150673,-0.0960934,0.116349,0.0441124,0.0828808,0.108241,0.194873,0.185844,0.0678481,-0.108501,0.148651,-0.271027,0.0112293,0.182016,0.0839339,-0.042646,-0.0984049,-0.191957,0.021277,-0.0706448,-0.143361,-0.161329,0.106788,0.151665,-0.133449,0.0416011,-0.0046189,-0.123891,0.00816891,-0.0365273,-0.108882,-0.189503,-0.185589,-0.0668681,-0.153087,-0.0152454,-0.0590685,-0.138269,0.0269083,0.0285553,-0.102112,-0.208635,0.143321,0.0212886,-0.00825246,-0.170498,0.056823,-0.151962,-0.0904634,-0.131862,-0.022324,0.0439277,0.040612,0.0970824,-0.00466663,0.00868594,-0.143843,0.0726176,0.111715,0.0353104,-0.129853,-0.0753601,-0.235068,-0.07095,-0.0617856,-0.12309,-0.169884,-0.107461,-0.0207408,0.0239387,-0.0961823,-0.0224904,-0.194339,-0.0389469,-0.168641,-0.162861,-0.170476,-0.153953,0.0359914,-0.00539378,0.138123,-0.00515775,-0.180069,-0.120972,-0.177078,0.0114545,0.0500874,-0.0104852,0.0153163,-0.283317,0.0364891,-0.214999,-0.119361,-0.0543179,-0.0878905,-0.129387,0.00573695,-0.0264832,-0.0204014,0.137956,0.096481,0.0886946,0.00839033,0.0437334,-0.0825234,0.0269663,0.0942667,-0.0898867,0.134173,-0.0849616,0.167247,-0.0699664,0.0150458,0.162474,0.229014,0.134507,-0.0725046,-0.125511,0.116009,0.237232,0.10202,0.040362,-0.0910712,0.0509343,-0.027091,0.0910153,0.0307262,-0.00507552,-0.075674,-0.0492454,0.255332,0.131795,0.148272,-0.0697253,-0.000936981,-0.0344628,-0.0109862,0.0723367,0.153572,-0.158287,0.0552666,-0.117615,-0.122257,-0.0898037,0.0218622,0.151226,-0.0635078,0.166152,0.0355322,0.0710423,0.118591,0.163145,-0.0404766,0.028836,0.160629,-0.110339,-0.0412999,-0.178159,-0.0900856,0.169011,0.121081,-0.00944559,0.0564529,-0.150864,-0.0889217,0.191482,-0.0599673,0.121736,-0.141507,0.195303,0.0115389,-0.136097,0.0222036,-0.186618,-0.000716195,-0.0496761,0.0436064,0.00642081,0.0784964,-0.141557,-0.062375,0.129437,-0.192691,-0.211683,-0.102062,-0.0635087,0.146819,0.0598687,-0.0315088,0.0399898,-0.0906548,-0.0528577,-0.204859,0.117692,-0.132358,-0.0712076,-0.151663,0.100809,-0.0226604,-0.148052,0.0956649,-0.00442783,-0.0877628,-0.0768999,-0.140004,0.0623088,-0.21952,-0.175014,0.107442,-0.254742,-0.200208,-0.07934,-0.103456,0.00281877,-0.0154037,-0.0827667,-0.0204382,-0.067272,0.168089,0.0258661,0.0714523,-0.112012,-0.201843,-0.0114335,-0.0355191,0.0144375,-0.125953,0.0217676,-0.255953,-0.192022,-0.217449,0.108171,0.0507624,-0.163285,-0.0309006,-0.181952,0.0775273,-0.0402782,-0.0509114,-0.143233,0.0596174,-0.141315,0.114234,-0.0685768,-0.160507,0.117695,0.27947,-0.104314,-0.11653,0.0635623,-0.186435,-0.0772677,-0.124,0.0905895,-0.180268,-0.0681328,-0.0010534,-0.0828558,0.100174,0.137854,-0.0880007,-0.0275783,-0.163147,0.00834487,0.233971,-0.152808,0.11268,-0.117339,-0.0223199,-0.0431547,0.174049,-0.105954,-0.0111887,0.0174597,0.0869125,-0.146045,-0.0289339,0.0885721,-0.129281,0.166627,0.000156032,-0.134292,0.137058,0.128551,-0.141844,-0.171662,-0.123129,0.0590795,0.15876,-0.199986,0.111584,-0.0570487,-0.166382,0.0927644,0.19075,0.0923236,0.1002,-0.177057,0.00313434,-0.0859489,0.0277452,-0.144985,-0.152921,-0.0815946,0.154522,-0.00288178,-0.18125,0.138142,0.000286581,-0.0265828,-0.271676,0.0806534,0.140321,-0.210562,0.118328,-0.0711583,0.0778941,-0.035157,-0.141438,-0.112552,0.118168,-0.172252,0.0321596,0.00755848,-0.0837547,0.128735,-0.0638651,-0.0721095,0.0972238,0.209363,0.0570383,0.0643215,0.139651,-0.0838697,0.124845,-0.213753,-0.0594434,0.255172,0.00774875,0.0876183,0.0730879,-0.0138866,0.032873,0.0222548,0.136381,-0.127168,-0.0492809,0.146234,-0.0557105,0.196082,0.0368886,-0.124977,-0.0913664,0.0975398,0.194206,-0.140418,0.155838,-0.0857142,0.0387877,0.14636,-0.157228,0.0273792,0.12382,0.0581628,0.171659,0.0322417,0.0118742,-0.00230286,-0.0261679,0.144176,0.131563,0.0108219,-0.00588442,0.0603287,-0.0909166,0.138674,-0.0870512,0.111435,0.113386,0.130908,-0.111401,-0.125747,-0.148188,0.270921,-0.124393,0.00646849,0.136066,-0.0160732,-0.100774,-0.0204793,-0.0577199,-0.0153522,-0.194802,-0.103992,-0.1553,0.0393386,-0.237267,-0.0324632,-0.130756,-0.114682,0.0583042,-0.147257,0.0248908,-0.0858271,0.0190073,-0.105688,0.0921886,-0.110151,0.113653,-0.0812341,-0.173653,0.108562,-0.0523619,0.0797852,-0.0629668,-0.15418,-0.128656,0.0382331,-0.145121,0.0647107,-0.0138824,-0.178551,0.0856483,0.0570401,-0.093748,-0.194251,-0.0348456,-0.198747,-0.172761,-0.0395503,-0.0646877,-0.115872,-0.0202367,4.9077e-05,-0.061785,0.0373721,-0.0356309,-0.0448831,-0.100054,-0.256402,-0.133531,0.0452675,0.00136397,0.0602661,-0.0828789,0.124613,-0.175866,0.0726588,-0.0562363,0.0384135,0.166528,-0.158621,-0.0525016,0.0633947,-0.113795,-0.109687,-0.232091,-0.103452,-0.0906687,-0.0482444,-0.020682,-0.0586945,-0.152863,-0.141518,0.107461,0.0955887,-0.165822,0.132257,0.0299193,0.0800328,0.154183,0.172779,0.0517627,-0.0978106,-0.0100914,-0.187088,-0.0181881,-0.0290165,-0.136147,-0.209893,0.0436312,-0.169615,0.0704645,-0.11394,0.0904049,0.161075,-0.102921,0.0557727,0.0442438,-0.047823,0.0535541,-0.0424205,0.0809783,0.0214765,-0.0708481,0.120047,0.0180277,-0.00825029,-0.288887,-0.196924,-0.0596695,-0.040926,-0.113456,-0.0312841,0.146515,-0.253567,-0.194798,-0.0473312,0.0139144,0.111883,-0.119889,0.0295487,0.0165281,0.126079,-0.0934436,-0.017881,-0.106244,0.00371318,-0.0946901,0.0935767,-0.0414047,-0.0485599,-0.288609,-0.0125394,0.100523,-0.0772411,-0.180568,0.0367364,0.0418022,-0.0113121,-0.0422147,-0.0282283,-0.0588295,0.0250135,-0.0341348,-0.215963,-0.185478,-0.0269835,-0.0349539,0.0662322,0.035693,0.0618849,-0.133111,-0.000439938,-0.110875,0.00529308,-0.0653936,0.0714265,-0.0199891,0.0261908,-0.221111,0.0578167,-0.101428,-0.139074,-0.142359,-0.206878,0.12481,0.119374,-0.109654,-0.060129,0.129392,-0.0956002,-0.0762269,-0.0815549,-0.00350361,0.166371,-0.129601,-0.182842,0.120638,-0.270165,-0.0175126,-0.16388,-0.0732992,-0.156076,-0.0652366,0.0584776,0.0708483,-0.00715042,-0.0319234,-0.0165742,0.01164,-0.00925681,0.121014,-0.0395226,0.0821494,0.0410906,0.127675,0.0113333,-0.109153,0.0626033,0.0338117,-0.0133702,-0.0169422,-0.142969,0.0145472,-0.0505754,-0.178069,-0.0642176,-0.158622,-0.21085,0.149661,0.0417795,-0.209808,-0.172324,-0.206879,-0.0601763,0.239065,0.194637,0.204358,-0.0984175,-0.155013,-0.111156,-0.178714,-0.208418,0.0984937,0.0888854,0.0659746,-0.111131,-0.00403366,-0.00475596,-0.132999,0.0664904,-0.1274,-0.158643,0.00167395,0.111805,0.150249,-0.0693064,0.0626712,-0.0814313,0.0216546,0.146113,0.0977532,0.0648424,0.150821,0.10109,0.137088,-0.178907,0.0153566,0.0912615,-0.1556,0.0885745,-0.00997739,-0.108911,0.0338948,0.00498412,0.103941,0.055157,0.0934747,-0.0830266,0.0119814,0.00207166,-0.105266,-0.184874,0.153583,-0.0480843,-0.0753259,-0.00195537,-0.0558675,-0.0165156,0.0384375,-0.112056,-0.0469626,0.00062518,0.0355985,0.16131,0.157501,0.0697297,-0.114065,-0.0106764,0.0176263,-0.101879,0.0627614,-0.184483,0.139417,0.0688778,-0.0622767,0.103899,-0.0287349,-0.103006,-0.2048,0.191188,-0.107596,0.0135536,-0.0311926,-0.125741,0.104773,-0.298261,-0.0897203,0.0551739,-0.18773,0.0156942,0.0653115,0.089627,-0.228659,-0.0515516,-0.278507,0.0732939,-0.0574377,0.121735,-0.153374,-0.218082,-0.121982,-0.129241,0.00207189,-0.0682679,0.112693,-0.0398935,-0.141904,0.0978429,0.145042,-0.100213,-0.105019,0.212039,-0.0281725,-0.146474,0.182522,-0.113719,0.158506,0.112754,-0.188202,0.0727634,-0.0153977,0.0019228,-0.0022779,-0.25779,-0.116162,0.241708,-0.105768,-0.0538109,-0.0306505,-0.00532207,0.0640586,0.114114,0.0583226,0.0671931,-0.0619714,-0.129464,0.103915,-0.135142,0.137829,0.0149799,0.14615,0.0863178,0.0398757,-0.0828488,0.0387335,-0.0286077,-0.0850755,0.042773,-0.178239,0.00185473,-0.0493507,-0.0819834,0.120358,-0.0909178,-0.0482002,0.00358884,0.148652,-0.0194593,-0.144646,0.0884468,0.0506216,-0.234046,0.164794,-0.177455,0.140837,0.0564188,-0.0246133,-0.0136456,-0.017179,0.02525,-0.130607,-0.268332,-0.194721,0.160506,-0.110011,0.138626,-0.0767568,-0.0950765,-0.0588789,0.153375,0.158456,-0.0487517,-0.0324915,0.16804,-0.230123,0.0394767,0.143932,-0.0770087,0.0755183,0.0563528,-0.117083,-0.133777,-0.130905,0.0967059,0.138128,-0.0975304,-0.158649,-0.0280735,-0.139593,0.0792576,-0.116508,0.165131,-0.0729346,0.118061,0.15753,-0.114849,-0.196987,-0.0804662,0.0665123,-0.171197,0.0644635,0.143488,0.0109023,-0.120121,-0.123458,0.12029,-0.00846388,0.0670034,-0.155738,-0.116909,-0.192957,-0.183655,-0.165733,-0.0678558,0.0684572,-0.141323,0.0392021,0.0858347,-0.0967709,0.0741007,-0.0541044,-0.0724806,-0.0186121,-0.113157,-0.0163376,-0.134402,-0.110883,0.152829,-0.0439934,-0.223296,0.138379,-0.0454982,0.0546295,0.117553,0.217066,-0.0767523,0.210617,-0.0428514,-0.097105,-0.00878344,0.0401068,-0.0209297,-0.0742207,0.0317204,-0.0370567,0.0963748,-0.0481392,0.0447314,-0.177238,-0.0531571,-0.0732124,-0.136998,0.101634,-0.0793521,0.125302,0.0308839,-0.0436995,-0.0941248,0.165174,0.114568,0.155971,0.100327,-0.153086,-0.075232,0.020284,-0.182322,0.061488,0.0770693,-0.0419935,-0.0268871,0.0891158,-0.124963,0.0844028,0.0862316,0.0213095,-0.0812352,0.0574846,0.0823011,0.00736813]},{"role":"bias","shape":[32],"shapeNote":"[32]","count":32,"stats":{"min":0.0,"max":0.0,"mean":0.0,"std":0.0,"absMax":0.0,"absP98":0.0},"data":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}],"outShape":[25,32]},{"id":"bn2","type":"BatchNorm","label":"BatchNorm \u00b7 32 channels","detail":"folded by the TFLite converter into (x + shift) x scale + offset","grid":{"mode":"strip"},"tensors":[{"role":"shift","shape":[32],"shapeNote":"[32]","count":32,"stats":{"min":-0.4243926405906677,"max":0.08781297504901886,"mean":-0.098538075297256,"std":0.12138149543894998,"absMax":0.4243926405906677,"absP98":0.3810051542520522},"data":[0.087813,-0.163057,-0.0307751,0.00539896,-0.354413,-0.126132,-0.17082,-0.232011,-0.0579032,-0.257663,-0.025263,-0.0514356,-0.0806849,0.0601189,-0.0573563,0.0256246,0.0743464,-0.0569639,-0.424393,-0.0590407,-0.0410056,-0.28429,-0.0320145,-0.089693,0.0442826,-0.0923684,-0.0427958,-0.00187335,-0.194985,-0.252347,-0.120633,-0.150887]},{"role":"scale","shape":[32],"shapeNote":"[32]","count":32,"stats":{"min":0.8187102675437927,"max":6.625295162200928,"mean":2.298769824206829,"std":1.101380031782588,"absMax":6.625295162200928,"absP98":4.86179721355438},"data":[1.01811,2.67255,1.6271,1.50893,6.6253,1.83036,1.12766,2.32436,2.11524,2.56606,1.09829,0.948312,1.91673,1.52712,1.72823,0.81871,2.19588,1.8873,3.54254,3.61795,3.12432,2.8208,2.44178,2.08168,1.95729,2.53938,1.61002,2.85553,2.13994,3.78094,3.44043,2.07178]},{"role":"offset","shape":[32],"shapeNote":"[32]","count":32,"stats":{"min":-1.2771562337875366,"max":-0.3767549395561218,"mean":-0.7716139201074839,"std":0.23227838122318722,"absMax":1.2771562337875366,"absP98":1.2603691840171813},"data":[-0.81839,-0.552425,-0.934627,-1.00109,-0.37872,-1.25008,-0.830932,-0.992803,-0.626197,-0.77442,-0.800089,-0.941418,-0.900981,-0.910163,-0.921273,-0.638597,-1.27716,-0.847885,-0.442434,-0.631218,-0.690045,-0.660702,-0.449849,-0.841465,-0.979453,-0.655342,-1.05741,-0.9496,-0.376755,-0.531031,-0.542992,-0.486104]}],"outShape":[25,32]},{"id":"mean15","type":"op","label":"GlobalAveragePooling1D","detail":"no learnable parameters","grid":null,"tensors":[],"outShape":[32]},{"id":"dense1","type":"Dense","label":"Dense \u00b7 24 units","detail":"32 inputs -> 24 units","grid":{"mode":"matrix","rows":24,"cols":32},"rowLabels":null,"colLabels":null,"tensors":[{"role":"kernel","shape":[24,32],"shapeNote":"[out=24, in=32]","count":768,"stats":{"min":-0.6480188965797424,"max":0.8220905661582947,"mean":-0.005797649287008729,"std":0.27310361819294077,"absMax":0.8220905661582947,"absP98":0.6063753008842467},"data":[0.146373,0.290861,-0.235216,-0.0128639,0.657968,0.153622,-0.16433,0.126734,0.417585,0.0349125,-0.106942,-0.115553,-0.530161,-0.00583345,0.0776051,-0.212955,0.0334576,0.097978,-0.524963,-0.569147,-0.0195007,0.382049,0.0207399,-0.354823,0.367142,-0.313978,0.180945,-0.561823,-0.31242,0.61801,0.176216,-0.313104,-0.515542,0.162917,-0.37145,-0.11769,-0.209905,-0.00958567,0.0811235,-0.23524,-0.562918,0.15393,0.0641631,0.272576,-0.320709,-0.425429,-0.31202,-0.334568,-0.12418,0.219731,-0.183986,-0.22772,0.576286,0.390958,0.360345,-0.510987,0.186214,0.611549,-0.299385,-0.186529,0.0888216,-0.310912,-0.314151,-0.0347097,0.114102,-0.123664,0.241761,-0.0467255,0.010008,-0.377855,0.546031,0.321553,0.0704166,-0.399145,0.3668,0.294807,-0.193675,-0.264682,0.152385,0.131699,-0.317256,0.436502,-0.234931,0.25478,-0.335253,0.176072,-0.0142517,-0.284066,0.189371,-0.127626,-0.224125,-0.289956,-0.0183826,-0.307567,-0.319618,0.0585249,0.378115,0.4543,-0.455531,-0.206278,0.128524,-0.173062,-0.22521,-0.188406,0.353176,-0.148144,-0.367742,-0.0673733,-0.444374,0.476675,0.128569,-0.00224621,0.617426,0.0855453,-0.20656,-0.381987,0.0729525,-0.0166714,0.369964,-0.165779,0.0483205,0.345409,-0.385435,-0.238109,0.249771,0.498067,0.225405,-0.00805529,0.0963894,-0.115099,0.288201,-0.177461,0.212032,-0.274565,0.257877,0.415813,-0.243645,-0.188157,0.217014,-0.136188,0.234584,0.0075367,-0.296073,0.336984,-0.237389,0.61789,0.148237,0.153134,-0.307739,0.296124,-0.106042,-0.19506,0.0912717,-0.033557,-0.391833,-0.282897,0.0662788,0.138703,-0.0556683,0.181541,-0.213506,0.0682877,0.125495,0.373541,-0.230089,0.446113,0.155558,-0.434757,-0.00277307,0.369163,0.211933,-0.180342,0.370019,0.0113631,0.100886,0.202016,-0.147873,-0.46789,-0.248389,-0.18342,0.44606,-0.0889322,0.0751513,0.185731,-0.425148,0.296414,-0.136596,0.231443,0.10442,-0.588578,-0.0618342,-0.312524,0.405254,-0.169521,-0.0665273,0.417975,0.720861,-0.147921,0.23142,-0.338447,0.267539,0.61012,0.214912,-0.32663,-0.223766,0.404499,-0.0276831,0.291758,0.0451394,-0.408381,-0.477653,-0.0178709,-0.140658,-0.444726,-0.409106,-0.0161911,-0.030095,0.0599945,0.167606,-0.121961,0.218114,0.323042,0.534489,0.189581,-0.314354,0.0469684,0.187796,-0.170767,0.0593839,-0.295124,-0.0138789,0.599561,0.169943,0.0143631,0.120012,0.231549,0.0998951,-0.0675819,0.0216873,-0.264626,-0.527359,0.0331455,0.0609574,-0.251664,-0.0664632,0.0554534,-0.236178,-0.111227,0.412583,0.0197869,-0.227795,-0.331356,0.135912,-0.278552,0.120307,-0.189469,-0.0213563,0.132133,-0.133346,0.278861,0.548662,0.153264,0.0665558,-0.291179,-0.192639,0.547126,0.0151314,-0.0714481,0.0103595,0.142368,0.221042,0.336734,-0.0375132,-0.217806,-0.557451,-0.242197,-0.5369,0.156914,-0.176323,0.0912386,0.0376355,-0.0603853,0.312885,-0.0906986,-0.150284,0.0507328,0.354243,-0.344757,0.117398,-0.0303272,0.230223,-0.257646,-0.414551,-0.0421235,-0.253561,-0.00742585,-0.193403,-0.0471194,-0.169481,-0.154126,0.596333,-0.143489,0.0144799,0.188587,-0.212871,0.0435394,0.674116,0.309557,-0.212561,0.0736231,0.0744228,0.656056,-0.31792,-0.26397,0.0462143,0.583439,0.236127,0.0722779,-0.230685,0.0534466,-0.0897151,-0.175444,0.363422,-0.13749,0.240987,-0.186276,0.349272,0.620315,-0.281633,-0.228465,0.239837,0.40574,0.173819,-0.288886,-0.37004,-0.112266,-0.161342,0.142555,0.203033,0.167795,-0.508537,0.0741378,-0.0705254,-0.0280728,0.342994,-0.0801608,-0.397342,-0.480639,-0.215089,0.215456,-0.0307298,-0.302434,-0.464371,-0.0737279,-0.086857,0.171998,-0.320533,0.0561522,0.148965,-0.0219704,-0.42988,-0.212623,-0.277831,0.20506,-0.250297,-0.12262,0.19091,0.102323,-0.0324055,0.0582188,-0.0375477,-0.0877888,0.294794,-0.104484,0.427607,-0.543809,-0.0406688,0.0204853,-0.398903,0.234339,0.0231707,-0.0866865,0.0451049,-0.306628,0.211306,0.0370251,-0.0870809,-0.301332,-0.00419364,-0.102429,0.510036,0.307549,0.136905,0.220274,0.138235,0.384403,-0.238666,-0.410213,-0.0121878,-0.0329223,-0.334826,0.254141,0.349148,0.149792,-0.041961,0.419514,-0.136127,-0.305202,0.269774,-0.274585,0.0768714,-0.346787,0.196376,-0.238395,-0.387021,-0.197469,0.253261,0.359206,-0.440077,0.15478,0.388774,-0.0601624,0.23809,-0.184905,0.323286,-0.130672,0.0848993,0.281414,-0.373916,0.335954,-0.226006,0.155054,0.238684,0.022224,-0.162638,-0.221461,-0.312554,-0.236805,-0.142504,0.0105797,0.147607,0.103516,-0.0807592,-0.0822965,-0.130397,0.71701,0.297866,-0.366563,-0.0890803,-0.110426,0.258653,-0.080759,0.0998055,-0.300466,0.344696,0.121596,-0.302186,-0.302387,-0.13355,0.452267,0.20949,0.0127655,-0.274399,-0.140282,-0.192375,0.116621,-0.104926,0.308492,-0.255819,0.402608,0.0929651,-0.195995,0.285356,-0.0394766,0.0528412,-0.216383,0.143505,-0.168209,-0.0897786,-0.131661,-0.249442,-0.0912349,0.240486,-0.15163,-0.530826,0.0429115,0.0314113,0.0472206,0.193603,0.207989,0.124974,-0.329088,0.470194,-0.0149459,0.283763,-0.0817521,-0.0376367,-0.163178,-0.0164975,0.604537,-0.262705,-0.169962,0.263309,0.506192,-0.117558,-0.424194,0.324362,0.310206,0.401166,-0.468318,-0.329426,0.0813847,0.25362,-0.249918,0.063282,-0.100279,-0.321427,0.311873,0.121088,0.138003,-0.0910668,0.10956,-0.147309,0.0834234,0.0921772,0.199199,0.36899,-0.0144124,-0.553651,0.112199,-0.453764,0.398964,-0.00285757,-0.187191,-0.150989,0.00704144,-0.319963,-0.44637,0.23815,0.02464,0.00046673,-0.647004,-0.326182,-0.158891,0.098127,-0.420679,-0.00371123,0.239256,-0.264965,0.428454,-0.335998,-0.1898,-0.434527,0.464666,-0.281954,-0.0632199,-0.0559405,-0.406709,0.419558,-0.0944038,-0.527462,-0.482649,-0.177357,0.279883,-0.0415985,-0.334402,-0.0685209,-0.0541036,-0.179049,0.189035,-0.236214,0.337902,0.215673,-0.499185,-0.396777,0.13367,0.0383534,-0.286272,0.0789003,0.117905,-0.648019,-0.458397,-0.0155759,-0.145126,0.215061,-0.404332,-0.181546,-0.246584,-0.0998296,0.111478,-0.296768,-0.0780854,0.295512,-0.0177871,0.822091,0.139933,0.621647,-0.41223,0.107047,0.27023,0.19293,0.444833,-0.202943,0.307186,0.465017,-0.153413,0.0117539,-0.0483802,0.180003,0.146725,0.148473,0.140837,-0.0481662,-0.183261,0.0443322,-0.428334,-0.027725,-0.0110292,0.0575958,0.0650853,0.00929247,-0.146229,-0.0847258,-0.16487,0.0111761,0.0137463,-0.351691,0.232387,0.501533,-0.463062,0.0469403,-0.186678,-0.176195,0.480782,-0.144408,0.235429,0.0988387,-0.0498587,-0.322192,-0.286115,-0.0570416,0.0272434,0.0621401,0.260954,-0.366628,0.158358,-0.457433,-0.115738,-0.305668,-0.421475,0.0264728,-0.0580716,0.182376,-0.246358,0.208299,0.199975,-0.0210279,0.0274865,-0.0967175,-0.143668,0.571003,0.00438937,0.317686,-0.451196,0.0680845,0.27348,-0.34712,0.31375,0.165105,-0.01165,0.0114694,0.00606938,-0.11096,-0.238165,0.0401947,-0.156157,-0.392778,-0.607323,0.015566,-0.0434141,0.251637,-0.424291,0.266591,-0.106206,0.247049,-0.166258,-0.35154,0.112891,0.390697,0.328207,0.53004,0.256315,0.126552,0.0894574,-0.0695048,0.369685,0.0779014,-0.460625,-0.353479,-0.0304246,0.161663,-0.294007,0.0119713,0.298303,0.0536869,0.182511,0.256351,-0.0802278,-0.103129,-0.507565,-0.221271,0.326224,0.188862,-0.463856,-0.343991,-0.325803,0.242754,-0.274533,-0.24642,0.163656,0.391778,0.307589,0.225936,0.338844,-0.0108269,0.08977,0.0676448,-0.0803126,0.0926499,-0.0289444,-0.113938,0.270195,0.205882,0.165958,-0.0361792,0.453714,0.296439,-0.152835,0.289625,-0.122559,-0.463813,-0.412524,0.0544936,-0.0682795,0.340442,-0.252375,-0.192274,0.150264,-0.0603366,-0.10652,-0.36221,-0.297745,0.179603,0.0646661,0.521344,0.223854,-0.0768681,-0.170412,0.0797719,0.557672,-0.372897,0.146915,-0.236389,0.0142747,0.50733,-0.0202103,0.0698982,-0.0510554]},{"role":"bias","shape":[24],"shapeNote":"[24]","count":24,"stats":{"min":-0.0866757407784462,"max":0.1996229588985443,"mean":0.050473191503745816,"std":0.07787736308441107,"absMax":0.1996229588985443,"absP98":0.18281034260988233},"data":[0.10593,0.199623,0.148482,0.163074,0.142874,0.0685118,0.0944344,-0.0235802,-0.0200561,0.0922304,0.0510525,0.0659462,0.0795615,0.0444882,0.0693352,0.0248568,-0.071678,0.0270692,0.11295,-0.0866757,-0.014813,0.0785387,-0.0839651,-0.0568327]}],"outShape":[24]},{"id":"dense2","type":"Dense","label":"Dense \u00b7 5 units","detail":"24 inputs -> 5 units","grid":{"mode":"matrix","rows":5,"cols":24},"rowLabels":["sitting","standing","walking","upstairs","downstairs"],"colLabels":null,"tensors":[{"role":"kernel","shape":[5,24],"shapeNote":"[out=5, in=24]","count":120,"stats":{"min":-0.7127538919448853,"max":0.7226001024246216,"mean":-0.10644857626563559,"std":0.4196943910947231,"absMax":0.7226001024246216,"absP98":0.7025326573848725},"data":[0.0279433,0.399068,0.274685,-0.698183,0.649163,-0.571911,-0.511217,0.382444,-0.636637,-0.255033,0.380727,0.301634,0.588466,-0.118539,0.496329,-0.208775,-0.305674,-0.608017,-0.454357,-0.48096,-0.0133468,0.264889,-0.377431,-0.223641,-0.59918,0.408625,-0.275417,0.160581,-0.0380521,0.555602,-0.550372,-0.238731,-0.50054,-0.644973,-0.266831,0.538019,-0.0402102,-0.290071,-0.0381482,-0.168438,-0.659279,0.282965,0.332249,0.628086,0.418904,-0.705198,-0.422165,-0.467628,0.635905,-0.257399,-0.420784,0.4816,-0.231918,0.0322053,0.436977,-0.0397875,0.512456,-0.660788,-0.0311913,-0.563821,-0.0443526,0.611808,-0.161863,-0.620887,-0.559114,-0.593074,-0.496787,-0.455433,-0.524129,-0.388916,-0.260668,-0.424292,-0.466045,-0.124511,-0.333087,-0.712754,-0.54702,0.548815,0.243543,0.206879,0.405806,0.397584,-0.0489885,-0.504034,0.0112512,-0.608459,-0.496313,0.614899,0.7226,0.468428,-0.53792,-0.182267,-0.298253,-0.192094,-0.544844,-0.222521,-0.399525,-0.532754,-0.557816,0.126241,0.249921,-0.584916,0.05778,-0.434179,-0.53879,0.47677,-0.133608,-0.31866,-0.190735,0.0848262,-0.233262,0.398399,-0.402179,-0.571169,0.460732,-0.530698,-0.285869,0.618953,0.461678,0.507167]},{"role":"bias","shape":[5],"shapeNote":"[5]","count":5,"stats":{"min":-0.2196478396654129,"max":0.24553537368774414,"mean":-0.02508579194545746,"std":0.17571007495040053,"absMax":0.24553537368774414,"absP98":0.24346437096595763},"data":[0.112224,-0.219648,0.245535,-0.102934,-0.160606]}],"outShape":[5]},{"id":"softmax18","type":"op","label":"Softmax","detail":"no learnable parameters","grid":null,"tensors":[],"outShape":[5]}]},{"name":"FRI Risk Classifier","file":"fri_classifier.tflite","fileBytes":5684,"description":"Dense MLP over 9 hand-computed gait features. Maps a gait profile onto the three Fall Risk Index zones.","inputShape":[1,9],"inputShapeNote":"9 gait features","inputNames":["copDev","swayAmp","asymLr","asymFb","pressureVar","cadence","strideVar","pressureEntropy","stanceRatio"],"outputNames":["Safe","Caution","High Risk"],"totalParams":899,"layers":[{"id":"dense1","type":"Dense","label":"Dense \u00b7 32 units","detail":"9 inputs -> 32 units","grid":{"mode":"matrix","rows":32,"cols":9},"rowLabels":null,"colLabels":["copDev","swayAmp","asymLr","asymFb","pressureVar","cadence","strideVar","pressureEntropy","stanceRatio"],"tensors":[{"role":"kernel","shape":[32,9],"shapeNote":"[out=32, in=9]","count":288,"stats":{"min":-1.3802540302276611,"max":1.368270754814148,"mean":0.08533634716726131,"std":0.33811739184929107,"absMax":1.3802540302276611,"absP98":0.9307258903980253},"data":[-0.411884,-1.26105,0.393402,0.497288,0.00801608,0.0609227,0.500312,-0.0470064,0.120991,0.00149626,0.0107919,-0.0893734,-0.0895824,-0.201838,0.0227511,-0.480394,0.438538,0.373815,0.415926,0.807416,-0.15075,-0.00758216,-0.0536594,-0.101026,-0.575897,0.224963,-0.0118929,0.260104,0.346874,-0.0985901,0.214742,0.28496,-0.0322623,0.601325,-0.0556451,0.284404,0.350483,0.219686,0.397368,0.229459,0.126481,-0.000389867,0.528719,0.240085,-0.0458781,0.423412,0.106202,-0.137954,0.407557,0.00108466,0.0524259,-0.00176895,-0.241077,-0.218536,0.262881,-0.305208,-0.386732,0.235111,0.207793,0.0826308,0.0866788,0.0655783,0.0101481,0.161916,-0.0859224,0.24213,-0.121756,-0.384327,0.322968,0.0410676,-0.0398022,-0.185051,0.309198,0.669994,0.418049,-0.156496,-0.150045,0.0228992,0.631018,-0.102767,0.241712,-0.188548,-0.12475,0.332318,0.295108,0.0114398,0.143742,-0.571186,0.302059,-0.0420646,0.47691,-0.115546,0.230452,0.550809,-0.0304111,-0.140138,-0.0244534,0.0243025,-0.0389269,-0.0437938,-0.133906,-0.227927,-0.24131,0.252327,0.396918,-0.148657,0.0347754,-0.166573,0.147465,0.589686,0.0911344,-0.375997,0.165428,0.34734,-0.0411405,-0.152879,-0.171216,0.429994,-0.359256,-0.226199,0.332831,0.311107,0.149081,0.309768,0.0379106,0.0397525,0.425106,-0.0613074,0.140899,-0.0162995,0.226992,0.242051,-0.0115889,0.362726,0.456447,0.0666325,-0.363938,0.3257,0.155363,0.0346336,0.206368,-0.507151,0.103947,-0.183783,-0.0630141,-0.438571,0.519598,0.127766,0.289849,0.172481,-0.33407,-0.11833,0.16289,0.36166,0.747503,0.505421,-0.0206132,-0.231311,0.304303,0.41552,0.184471,0.303968,-0.104693,-0.521997,-0.0267013,-0.531374,0.381619,0.266018,-0.335649,0.375168,-0.0361573,0.255793,0.61457,-0.130151,0.314456,0.265027,0.148258,0.647128,-0.0370719,-0.264343,-0.320735,0.740977,0.0628076,0.285749,0.544213,0.607452,0.466768,0.546106,0.302905,0.160397,0.696421,0.574897,0.0015582,0.359201,0.303424,0.266302,-0.102467,0.0556108,0.306617,0.495032,0.299491,0.346707,-0.175225,-0.0194316,0.279234,0.186158,-0.136288,0.00986445,-0.271918,0.13355,-0.105226,0.277714,0.0410666,-0.293157,-0.223492,0.21261,0.329055,-0.332163,0.0305212,0.0108861,0.326495,-0.119062,-0.445662,-0.0194986,0.0252491,0.59104,0.123539,-0.926284,-0.943367,0.0136603,0.150219,0.557118,-0.00686424,0.0196714,-0.205896,0.409823,0.605822,0.696786,0.0607485,0.138289,-0.516851,-0.0292098,-0.256284,0.21199,0.217635,0.239854,-0.132733,-0.0643428,-0.580238,0.0476336,-0.535915,-0.467958,0.193046,0.0861685,0.337529,0.00672565,-0.101033,0.0916228,0.0143724,0.21508,0.254986,1.36827,-0.561239,-0.0836357,-0.0348282,0.0344972,-0.00372798,-1.38025,-0.0152875,-0.00459012,0.449344,0.316119,0.139971,0.409222,0.518243,-0.176794,0.558422,0.331075,0.0736806,0.159341,-0.971474,-0.0304342,-0.0794013,0.0656987,0.0196224,1.30913,0.0496954,-0.0625203]},{"role":"bias","shape":[32],"shapeNote":"[32]","count":32,"stats":{"min":-0.36079421639442444,"max":0.47396957874298096,"mean":0.10119336354546249,"std":0.28980991899582065,"absMax":0.47396957874298096,"absP98":0.471704004406929},"data":[0.0481423,0.470315,-0.223277,-0.333934,-0.333212,0.399425,0.379251,0.314833,-0.152834,0.40042,0.00439755,0.325155,-0.17442,0.394194,0.354866,0.442256,0.371728,-0.360794,0.296269,-0.260704,0.303757,-0.327051,-0.173498,0.400826,0.47397,0.318572,-0.329338,0.0312641,0.203546,-0.0372709,-0.111878,0.123213]}],"outShape":[32]},{"id":"dense2","type":"Dense","label":"Dense \u00b7 16 units","detail":"32 inputs -> 16 units","grid":{"mode":"matrix","rows":16,"cols":32},"rowLabels":null,"colLabels":null,"tensors":[{"role":"kernel","shape":[16,32],"shapeNote":"[out=16, in=32]","count":512,"stats":{"min":-2.1231837272644043,"max":2.605175495147705,"mean":0.04512133012030972,"std":0.4814052735635075,"absMax":2.605175495147705,"absP98":1.4658491086959833},"data":[-0.0782955,0.146752,-0.0173437,0.0229438,0.0521316,0.084836,-0.0565426,-0.317952,-0.183171,0.0372689,-0.255105,0.28771,0.0206157,-0.269881,0.114008,-0.200065,-0.133714,-0.0262165,0.257042,-0.206198,-0.118788,0.222037,-0.225366,-0.244149,-0.0604304,0.311723,0.252031,-0.307208,-0.341231,-0.176098,-0.140548,-0.264123,-0.493368,-0.212467,0.436343,0.180096,0.17595,-0.071586,0.272504,-0.183365,0.161888,-0.148166,-0.603877,0.460495,0.562248,0.0980262,-0.136562,-0.481073,-0.0198095,0.239496,0.382482,-0.0846346,0.323498,-0.0264613,0.0711997,-0.0592107,-0.0105327,-1.09511,-0.314381,-0.0471323,0.151627,1.39896,0.368478,1.23845,0.65806,-0.0194914,-0.295186,-0.224377,0.265579,-0.127661,0.0518988,-0.115773,0.159349,0.475313,0.176039,-0.222469,-0.270503,-0.0557186,-0.0545943,0.092505,0.173039,0.122044,0.134074,-0.405406,0.124682,0.255371,-0.169536,0.516561,0.285764,0.96516,0.395815,0.0762535,0.178727,-1.26497,0.277505,-1.2282,1.27155,-0.469749,0.724348,0.58576,0.264527,0.0898171,0.0816903,-0.153036,0.106672,-0.146319,-0.244659,-0.0478229,0.153913,0.255888,0.365704,-0.424833,-0.471994,0.299825,-0.479374,0.6918,0.2716,0.498156,0.329044,-0.414565,-0.433579,1.03131,0.461283,-0.435272,-0.201198,1.93096,0.472175,1.47584,1.51196,-0.247631,0.812297,0.480567,0.558045,0.0134493,-0.28609,-0.124749,0.389542,-0.279756,0.147527,0.0892428,0.320571,0.155849,0.24415,-0.652772,-0.165011,0.201496,-0.587522,0.580488,0.12579,0.339954,0.666886,0.0238135,-0.540742,0.792419,0.876455,-0.622141,0.295061,2.60518,0.639771,0.986796,-0.325967,-0.233414,-0.205704,-0.265724,0.292227,0.0501123,0.277792,-0.197417,0.079313,-0.34823,0.0277768,-0.0561382,0.0540948,-0.0283045,-0.0807903,0.0445169,-0.285442,-0.196018,0.134216,0.0298063,-0.349134,-0.189454,0.330059,-0.0215335,0.024982,0.0556959,-0.1661,-0.318859,-0.300563,-0.141717,-0.235697,-0.333542,-0.257012,0.335878,0.215631,0.163373,-0.339785,-0.0415335,0.211729,-0.257031,0.0318972,-0.0884984,0.0393479,0.145562,-0.161579,-0.231841,-0.258201,-0.219116,0.107495,-0.0499889,0.0533991,0.136948,-0.280855,-0.14475,-0.237112,0.0182224,-0.216562,-0.183936,-0.218101,0.0893269,-0.326957,-0.0348897,0.117133,0.331382,-0.491182,0.421182,-0.639446,-0.187624,-0.110764,0.561422,0.604719,0.192267,0.0538796,0.422945,0.10908,0.456039,-0.4469,0.344926,0.0327218,0.321099,0.459226,-0.32151,0.137809,-0.605751,0.0740689,-0.318829,0.178857,0.402053,0.851501,0.315574,-0.306275,0.358582,0.101386,-2.04889,0.139739,-1.44707,0.266205,0.172932,-0.33961,-0.371128,0.0281938,-0.0265566,-0.334476,-0.0287876,0.106835,-0.0841514,0.0588238,-0.0752993,-0.0834841,0.111454,-0.193989,-0.252904,0.243643,0.100642,-0.182423,-0.123118,-0.14616,-0.0689917,0.110552,-0.165876,0.146186,0.271036,0.0355848,0.242623,0.143707,-0.198447,-0.384385,-0.226049,-0.542068,-0.0642107,-0.30726,-0.533574,0.129738,0.192704,0.090483,0.214135,-0.415571,0.403288,0.531442,0.43579,-0.334872,0.368971,0.402091,0.753638,0.565836,-0.301149,0.0372506,-0.523793,0.23403,-0.255338,-0.322471,0.114025,0.342768,0.114836,0.117751,0.800692,0.328852,-2.12318,0.0439213,-1.47115,1.50953,-0.264904,0.616686,0.187763,0.595056,-0.259349,-0.0700088,-0.4943,0.6858,-0.102223,0.241109,-0.401145,0.329562,-0.109083,-0.0386285,-0.162949,0.00148341,0.591904,-0.134211,0.164956,0.386113,0.451375,0.427703,-0.559171,-0.568896,0.949755,0.534924,-0.610197,0.196464,2.30943,0.393581,1.31547,0.94109,-0.603353,0.338377,0.263865,0.315307,0.0798052,-0.542303,-0.410339,0.222166,0.101647,0.638664,-0.234193,-0.0281282,0.134019,-0.349081,-0.315202,0.310372,0.527856,-0.443721,0.307259,0.113551,0.511946,0.66292,0.0469089,-0.203756,0.938676,0.737722,-0.13228,0.244209,1.01732,0.437682,0.0511216,-1.08336,0.406705,-0.48182,-0.612541,-0.27116,0.508594,0.33652,0.169742,-0.300648,0.467868,0.173375,0.271046,-0.200098,0.0997354,0.255007,0.51293,0.205063,-0.417968,0.574523,-0.0855304,0.111902,-0.192316,-0.0187866,0.46394,0.453023,-0.533132,-0.635153,0.667367,0.158768,-1.85454,0.158172,-0.683663,0.913728,0.00491037,0.668153,0.414665,0.240227,-0.199724,-0.449483,-0.233217,0.298645,0.246396,0.639802,-0.456479,0.434053,-0.00969496,0.0691995,0.0814007,0.176622,0.396584,-0.284523,0.410225,-0.0343168,0.172096,0.121115,-0.0797013,-0.250015,1.40784,0.819779,0.0113708,0.290565,0.746675,0.395169,0.0540376,-0.165633,0.0560389,0.194361,-0.221983,-0.325323,0.00324438,0.0259203,0.119209,0.228205,0.0541325,0.23197,-0.206361,0.219812,-0.0641382,-0.00789666,0.229568,-0.29033,-0.228174,0.160647,-0.29424,0.111451,-0.0978381,-0.326873,-0.159926,-0.0460747,-0.0828214,-0.202787,-0.191357,-0.0617457,-0.102159,-0.3576,-0.204679,-1.34617,0.19143,-0.611453,-0.630885,-0.600897,0.174586,0.194459,-0.0296926,-0.372366,0.353963,0.069701,0.575,-0.131602,0.475304,-0.13679,-0.0917364,0.354286,-0.338867,0.508061,-0.517092,0.106118,-0.263833,-0.240931,0.298092,0.166572,-0.946634,-1.25701,0.28708,0.226164,-2.01937,-0.165626,-0.0141024]},{"role":"bias","shape":[16],"shapeNote":"[16]","count":16,"stats":{"min":-0.23508320748806,"max":0.3357236087322235,"mean":0.015552389901131392,"std":0.19232150992243452,"absMax":0.3357236087322235,"absP98":0.33526493310928346},"data":[-0.0443465,-0.0553474,0.107275,-0.235083,-0.220183,0.0,0.0,0.334195,-0.0168284,0.335724,-0.191251,-0.157919,0.304584,-0.155063,-0.024803,0.267885]}],"outShape":[16]},{"id":"dense3","type":"Dense","label":"Dense \u00b7 3 units","detail":"16 inputs -> 3 units","grid":{"mode":"matrix","rows":3,"cols":16},"rowLabels":["Safe","Caution","High Risk"],"colLabels":null,"tensors":[{"role":"kernel","shape":[3,16],"shapeNote":"[out=3, in=16]","count":48,"stats":{"min":-1.2799644470214844,"max":1.0514599084854126,"mean":-0.08406198808612923,"std":0.6145697090186246,"absMax":1.2799644470214844,"absP98":1.2359883427619935},"data":[-0.416868,-0.189361,0.0561801,-0.672317,-0.760668,-0.0550119,0.473123,0.86425,0.420372,0.0916509,-1.09316,-1.23318,0.972392,-0.93476,-0.435198,0.832263,0.0295306,-0.891425,0.485827,0.197996,0.339801,-0.333883,-0.171809,0.53486,-0.414574,0.0185693,0.0277582,0.0677808,0.0508267,0.162476,-0.344456,-0.897988,0.49713,0.544301,-0.370691,1.05146,0.97671,0.378129,-0.204807,-1.27996,0.0280153,-1.19688,0.764057,-0.0959526,-0.933711,-0.0344907,-0.481452,-0.457839]},{"role":"bias","shape":[3],"shapeNote":"[3]","count":3,"stats":{"min":-0.22288870811462402,"max":0.17436426877975464,"mean":-0.017161920977135498,"std":0.16248840909910228,"absMax":0.22288870811462402,"absP98":0.22094773054122924},"data":[0.174364,-0.00296132,-0.222889]}],"outShape":[3]},{"id":"softmax3","type":"op","label":"Softmax","detail":"no learnable parameters","grid":null,"tensors":[],"outShape":[3]}]}],"personalisation":{"consts":{"gainPerSd":12.0,"zClamp":3.0,"sdFloorFraction":0.15,"friSdCeiling":15.0,"bandDriftLimit":12.0,"cautionCeiling":47.0,"highCeiling":85.0,"minBandWidth":15.0,"softeningBudget":8.0,"popCaution":35.0,"popHigh":78.0,"kMinSessions":5.0,"kFullSessions":15.0,"sdAbsoluteFloorFri":4.0},"source":["personal_norm_service.dart","personal_model_state.dart"]},"session":{"file":"gaitshield_1784449680269309.csv","meta":{"Date":"2026-07-16 14:47","Mode":"Fall Prevention","Duration":"1m 43s","Steps":"23","Avg FRI":"73.5 (High Risk)","Peak FRI":"79.7"},"sessionFri":73.5,"n":2719,"traceMean":73.5176498712762,"traceSd":5.017802563044055,"traceMin":38.71,"traceMax":79.73,"fri":[38.71,44.41,49.25,53.37,56.87,59.85,62.38,64.53,66.35,67.91,69.23,70.35,71.3,72.12,72.83,73.44,73.96,74.41,74.78,75.1,75.37,75.57,75.92,76.47,76.97,77.4,77.76,78.06,78.32,78.54,78.73,78.89,79.03,79.14,79.1,78.74,78.44,78.18,77.96,77.77,77.61,77.48,77.36,77.26,77.18,77.11,77.05,77.0,76.96,76.92,76.89,76.86,76.84,76.82,76.8,76.79,76.78,76.77,76.76,76.75,76.74,76.74,76.74,76.73,76.73,76.73,76.72,76.72,76.72,76.72,76.72,76.72,76.71,76.71,76.71,76.67,76.34,75.13,73.28,71.56,70.11,68.87,67.82,66.92,66.16,65.52,64.97,64.5,64.1,63.76,63.48,63.23,63.03,62.85,62.7,62.57,62.47,62.37,62.3,62.23,62.52,63.45,64.28,64.98,65.58,66.08,66.51,66.88,67.19,67.45,67.68,67.87,68.03,68.17,68.29,68.39,68.47,68.54,68.61,68.66,68.7,68.74,68.77,68.8,68.82,68.84,68.86,68.87,68.88,68.89,68.9,68.91,68.92,68.92,68.93,68.93,68.93,68.94,68.94,68.94,68.94,68.94,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,68.95,67.89,66.98,66.21,65.56,65.0,64.53,64.13,63.79,63.5,63.25,63.04,62.86,62.71,62.58,62.47,62.38,62.3,62.23,62.18,62.13,62.09,62.05,64.54,66.83,68.77,70.43,71.83,73.03,74.04,74.9,75.64,74.76,73.91,74.79,75.54,76.18,76.72,77.18,77.57,76.39,74.21,72.36,70.78,69.44,68.3,67.34,66.51,65.81,65.22,66.96,68.44,69.7,70.77,71.68,72.45,73.11,73.67,74.14,74.55,72.64,71.02,69.65,68.46,67.42,66.53,65.85,65.5,66.31,67.45,68.53,69.61,70.63,71.55,72.32,72.95,73.52,74.0,74.4,74.75,75.04,75.29,75.51,75.8,76.28,76.81,77.25,77.64,77.96,78.23,78.47,78.67,78.84,78.98,79.1,79.21,79.29,79.37,79.43,79.49,79.53,79.57,79.61,79.63,79.66,79.68,79.7,79.71,79.72,79.73,79.34,78.3,77.13,75.82,74.71,73.76,72.96,72.39,70.76,69.38,68.2,67.2,66.35,67.82,69.07,70.13,71.03,71.79,72.45,73.0,73.47,73.87,74.21,74.5,74.74,74.95,75.13,75.28,75.41,75.52,75.61,75.69,75.76,75.81,75.86,75.9,73.75,71.92,70.36,69.04,67.91,66.96,66.14,65.45,64.87,64.37,63.94,63.54,63.2,63.14,63.84,65.26,66.63,68.0,69.2,70.22,71.09,71.83,72.46,72.99,73.55,74.13,74.62,75.09,75.69,76.18,76.59,76.94,77.23,77.48,77.7,77.88,78.03,78.17,78.28,78.37,78.45,78.52,78.58,78.63,78.67,78.71,78.74,78.76,78.79,78.81,78.82,78.41,77.62,76.6,75.47,74.33,73.36,72.53,71.83,71.23,70.73,70.29,69.93,69.7,68.43,67.35,66.43,65.65,64.99,64.42,63.94,63.54,63.19,62.89,62.64,62.43,62.25,62.1,61.97,61.86,61.76,61.68,61.61,61.56,61.51,61.46,61.43,61.4,61.37,61.35,61.33,61.32,61.3,63.42,65.22,66.76,68.06,69.17,70.11,70.91,71.59,72.55,72.98,73.35,73.67,73.93,74.16,74.35,74.51,74.65,74.77,74.87,74.95,75.03,75.09,75.14,75.18,75.22,75.25,75.28,75.31,75.32,75.34,75.36,75.37,75.38,75.39,75.39,74.53,73.68,72.84,72.03,72.93,73.69,74.34,74.9,75.37,75.76,76.1,75.22,74.36,73.51,72.68,71.87,72.79,73.58,74.24,74.81,75.3,75.71,76.05,76.25,76.52,76.35,76.22,76.1,76.0,75.92,75.84,75.76,75.71,75.67,75.64,75.61,75.58,75.56,75.54,75.52,75.51,75.5,75.49,75.48,75.48,75.47,75.46,75.46,75.46,75.45,75.45,75.45,75.45,75.45,75.44,75.44,75.44,75.44,75.44,75.44,75.44,75.44,75.44,75.42,75.39,75.33,73.74,72.09,71.21,71.12,71.36,71.67,72.14,72.8,73.52,74.2,74.77,75.26,75.68,76.03,76.33,76.58,76.8,76.99,77.14,77.27,77.39,77.48,77.57,77.64,77.69,77.74,77.79,77.82,77.85,77.88,77.9,76.98,76.09,76.37,76.62,76.7,76.77,76.82,76.87,76.95,76.62,76.34,76.1,75.89,75.72,75.57,75.23,75.15,75.09,75.04,74.99,74.95,74.92,74.89,74.87,74.85,74.83,74.82,74.81,74.8,74.79,74.65,74.19,73.24,72.28,71.53,71.02,70.76,70.61,70.45,70.38,70.92,71.3,70.36,69.44,69.06,69.42,70.25,70.88,71.66,72.53,73.25,73.83,74.33,74.75,75.11,75.42,75.68,75.9,76.08,76.24,76.38,76.49,76.59,76.68,76.75,76.81,76.86,76.9,76.94,76.97,77.0,77.02,77.04,77.05,77.07,77.08,77.09,77.1,76.2,75.31,74.66,74.49,74.89,75.59,76.18,76.68,77.11,77.48,77.2,77.22,77.23,77.25,77.26,77.26,77.27,77.28,77.28,77.29,77.29,77.29,77.3,77.3,77.3,77.3,76.68,75.32,74.92,72.88,71.12,69.39,67.37,65.52,64.3,63.47,62.72,61.86,61.0,60.43,60.07,62.99,65.47,67.58,69.37,70.9,72.19,73.3,74.23,75.03,75.7,76.28,76.77,77.18,77.54,77.84,78.09,78.31,78.49,78.65,78.78,78.9,78.99,79.07,79.14,79.2,79.25,79.3,78.35,77.42,77.74,78.01,78.24,78.36,78.47,78.56,77.26,76.3,74.45,72.88,71.54,70.41,69.44,68.62,67.92,67.33,66.83,66.4,66.03,65.72,65.46,65.24,65.05,64.88,64.75,64.63,64.53,64.45,64.38,64.31,64.26,64.22,64.18,64.15,64.12,64.1,64.08,64.06,64.05,64.04,64.03,64.02,64.01,64.0,64.0,63.99,63.99,63.99,63.98,63.98,63.98,63.98,63.98,63.98,63.98,63.97,63.97,65.93,67.58,68.98,70.17,71.18,72.02,72.71,73.26,71.95,70.62,70.62,71.43,72.19,72.9,73.5,74.0,74.45,74.78,75.08,75.36,75.59,75.79,75.96,76.1,76.22,76.32,76.43,76.65,77.06,77.36,77.62,77.83,78.02,78.17,78.31,78.42,78.52,78.6,78.67,78.73,78.78,78.82,78.86,78.89,78.91,78.94,78.96,78.97,78.99,79.0,79.01,79.02,79.02,79.03,79.03,79.04,79.04,79.04,78.1,77.18,76.28,75.39,75.94,76.41,76.81,77.15,77.43,76.3,75.34,74.49,74.87,75.19,75.47,75.7,75.9,76.07,76.21,76.33,76.43,76.52,76.6,76.66,76.71,76.76,76.8,76.83,76.86,76.88,76.91,76.92,76.94,76.95,76.96,76.97,76.98,76.98,76.99,76.99,77.0,77.0,77.0,77.01,77.01,77.01,75.05,73.39,71.98,70.78,69.76,68.89,68.15,67.52,66.99,66.54,66.15,65.82,65.55,65.31,65.11,64.94,64.79,64.67,64.56,64.47,64.4,64.33,64.28,64.23,64.19,64.16,64.13,64.11,64.09,64.07,64.05,64.04,64.03,64.02,64.01,64.01,64.0,64.0,63.99,63.99,63.99,63.98,63.98,63.98,63.98,63.98,63.98,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.97,63.94,63.89,63.86,63.87,63.87,63.87,63.88,63.85,63.82,63.81,63.83,63.85,63.87,63.89,63.9,63.91,63.92,63.93,63.93,63.94,63.94,63.95,63.95,63.93,63.89,63.86,63.89,65.85,67.51,68.92,70.12,71.14,72.0,72.74,73.36,73.9,74.35,74.73,75.06,75.34,75.57,75.77,75.95,76.09,76.21,76.32,76.41,76.48,76.55,76.6,76.65,76.69,76.72,76.75,76.77,76.79,76.81,76.83,76.84,76.85,76.86,76.87,76.87,76.88,76.88,76.89,76.89,76.9,76.9,76.9,76.9,76.9,76.9,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,77.23,77.51,77.74,77.94,78.11,78.25,78.37,78.48,78.56,78.64,78.7,78.76,78.8,78.84,78.87,78.9,78.93,78.95,78.96,78.98,78.99,79.0,79.01,79.02,79.03,79.03,79.04,79.04,79.04,79.05,79.05,79.05,79.05,79.05,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,78.12,77.2,76.3,75.41,74.54,73.69,72.86,72.04,71.24,70.45,69.68,68.93,70.33,70.67,70.96,71.22,70.25,69.27,68.47,67.8,67.22,66.74,66.32,66.85,67.31,67.69,68.02,68.3,68.54,68.74,68.91,69.06,69.18,69.29,68.49,67.81,67.23,66.74,66.33,65.97,65.67,66.33,67.93,69.27,70.38,71.28,71.98,72.56,73.15,73.8,74.43,75.07,75.72,76.22,76.65,77.01,77.32,77.58,77.8,77.99,78.15,77.97,77.81,77.67,77.56,77.46,77.38,77.31,77.25,77.2,77.16,77.12,77.09,77.06,77.04,77.02,77.0,76.99,76.98,76.97,76.96,76.95,76.95,76.94,76.94,76.93,76.93,76.93,76.92,76.92,76.92,76.92,76.92,76.92,76.92,76.92,76.92,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,76.91,77.23,77.51,77.74,77.94,78.11,78.25,78.37,78.48,78.56,78.64,78.7,78.76,78.8,78.84,78.87,78.9,78.93,78.95,78.96,78.98,78.99,79.0,79.01,79.02,79.03,79.03,79.04,79.04,79.04,79.05,79.05,79.05,79.05,79.05,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,79.06,78.91,78.39,77.79,77.28,76.73,76.24,75.85,75.42,74.98,74.58,74.2,73.82,73.44,73.07,73.65,74.14,74.55,74.91,74.48,74.49,74.76,75.46,76.0,76.46,76.85,77.18,77.46,77.7,77.91,77.86,77.66,77.63,77.84,78.02,78.18,78.31,78.3,77.64,76.74,76.57,76.88,76.77,76.63,76.28,76.28,76.7,77.06,77.36,77.61,77.83,78.01,78.17,78.31,77.83,76.81,75.84,74.58,73.95,72.94,72.07,71.61,71.03,70.36,69.74,69.19,68.72,68.38,68.04,67.71,67.41,67.14,66.98,66.84,66.72,67.0,68.42,68.75,68.55,68.26,68.18,67.77,67.63,67.57,67.34,67.3,67.3,67.24,67.26,67.31,67.31,67.34,67.4,67.58,67.8,68.05,68.34,68.78,69.26,69.94,70.61,71.3,72.08,72.81,73.42,73.95,74.39,74.77,75.09,75.36,75.66,76.06,76.57,76.94,77.26,77.53,77.76,77.96,78.12,78.26,78.38,78.48,78.57,78.65,78.71,78.76,78.81,78.84,78.88,78.91,78.93,78.95,78.97,78.98,78.99,79.0,79.01,79.02,79.03,78.09,77.16,76.26,75.38,74.51,73.66,74.47,74.53,73.59,72.4,71.29,70.58,69.8,69.04,68.6,68.07,67.72,67.46,67.24,67.08,66.84,66.7,66.68,66.65,66.7,66.73,66.64,66.67,66.77,66.75,66.75,66.74,66.77,66.76,66.79,66.88,66.95,68.29,69.46,70.48,71.36,72.17,72.95,73.51,74.06,74.56,75.04,75.45,75.81,76.29,75.41,74.54,73.69,72.86,72.04,73.14,73.72,74.52,75.2,75.78,76.27,76.69,77.05,77.35,77.61,77.82,78.01,78.17,78.3,78.42,78.51,78.6,78.67,78.73,78.78,78.82,78.86,78.89,78.91,78.94,78.95,78.97,78.98,79.0,79.01,79.01,79.02,78.58,77.77,76.73,75.7,74.83,74.08,73.45,72.92,72.46,71.84,71.55,70.98,70.44,70.51,71.5,72.15,72.67,73.21,73.66,74.03,74.37,74.59,74.81,75.15,75.41,74.24,73.26,72.45,71.67,70.97,70.37,70.0,69.55,69.37,69.34,69.09,68.9,68.73,68.6,68.7,68.86,68.85,68.81,69.19,69.64,71.01,70.23,69.46,68.71,67.98,67.26,66.55,68.32,69.82,70.91,72.08,73.08,73.93,74.65,75.26,75.78,76.22,76.6,76.92,77.19,77.42,77.62,77.78,77.93,78.05,78.15,78.24,78.31,78.37,78.43,78.47,78.51,78.54,78.57,78.6,78.62,78.63,78.65,78.5,77.93,77.1,76.13,76.45,76.72,76.95,77.14,77.3,77.44,77.56,77.66,77.39,77.03,77.08,76.95,76.64,76.53,76.42,74.92,73.66,72.66,71.81,71.01,70.36,69.82,69.49,69.38,69.45,69.66,70.05,70.9,71.95,72.89,73.69,74.37,74.95,75.45,75.87,76.22,76.52,76.78,77.0,77.19,77.34,77.48,77.59,77.69,77.77,77.84,77.9,77.95,77.99,78.03,78.06,78.09,78.11,78.13,78.15,78.16,78.17,78.18,78.19,78.2,78.2,78.21,78.21,78.22,78.22,78.22,77.86,77.92,77.97,78.19,78.38,78.54,78.68,78.71,78.82,78.92,79.0,79.07,77.73,76.76,75.87,75.15,74.54,73.98,73.47,73.03,72.69,72.4,72.18,71.97,71.86,71.81,71.79,72.91,73.89,74.73,75.44,74.57,73.72,72.88,72.07,71.26,70.48,69.71,68.95,68.22,67.49,66.78,66.09,68.09,69.8,71.24,72.48,73.52,74.41,75.17,75.81,76.36,76.82,77.22,77.55,77.84,78.08,78.29,78.46,78.61,78.74,78.85,78.94,79.01,79.08,79.14,79.18,79.22,79.02,78.49,77.77,78.02,78.23,78.41,78.56,78.69,78.79,78.75,78.85,78.93,79.0,79.07,77.68,76.65,75.73,74.83,74.06,73.43,72.93,72.4,71.95,71.58,71.39,71.31,71.12,71.03,70.98,70.86,71.03,71.21,71.5,71.93,72.49,73.12,74.01,74.82,75.51,74.64,73.79,72.95,72.13,71.33,70.54,69.77,71.22,72.45,73.49,74.38,75.13,75.78,76.32,76.78,77.18,77.51,77.8,78.04,78.25,78.42,78.57,78.7,78.8,78.9,78.97,79.04,79.09,79.14,79.18,79.22,79.25,79.05,78.45,77.6,77.87,78.09,78.28,78.45,78.59,78.7,78.27,78.43,78.15,78.21,78.06,77.68,77.54,77.42,77.18,77.03,76.99,76.83,76.65,76.68,76.68,76.67,76.65,75.55,74.67,73.96,73.33,72.91,72.53,72.28,73.34,74.25,75.01,75.67,76.22,76.69,77.1,77.44,77.73,77.97,78.18,78.36,78.51,78.64,78.75,78.84,78.92,78.99,78.88,78.46,78.59,78.71,78.81,78.89,78.96,79.03,78.67,78.78,78.6,78.38,78.33,77.9,76.48,75.4,74.39,73.52,72.69,71.87,71.08,70.29,69.53,68.78,68.04,67.32,66.62,65.92,65.24,64.58,66.8,68.68,70.29,71.65,72.81,73.79,74.63,75.34,75.94,76.46,76.89,77.27,77.58,77.85,78.08,78.27,78.44,78.58,78.7,78.8,78.88,78.96,79.02,79.07,79.12,79.15,79.19,79.21,79.24,79.26,79.27,79.29,79.3,79.31,79.32,79.33,79.01,78.38,77.54,76.69,75.96,76.47,76.91,77.28,77.59,77.86,77.71,77.96,76.76,75.45,74.91,74.1,73.41,72.93,72.41,71.94,71.55,71.24,70.97,70.64,70.38,70.17,69.96,69.82,69.73,69.73,69.62,69.56,69.55,69.59,69.63,69.72,71.16,72.39,73.44,74.33,75.09,75.73,76.27,76.74,77.13,77.47,77.75,78.0,78.2,78.38,78.53,78.65,78.76,78.85,78.93,79.0,79.05,79.0,78.55,77.8,76.9,77.27,77.59,77.86,78.08,78.14,78.32,77.89,77.46,77.44,77.02,76.8,76.54,76.44,75.19,74.15,73.19,72.32,71.74,71.19,70.7,70.32,70.02,69.79,69.56,69.45,69.37,69.25,69.33,69.49,69.46,69.45,69.46,69.48,69.48,69.83,71.07,72.08,73.17,72.35,71.54,70.75,69.98,69.22,68.47,70.11,71.5,72.68,73.68,74.53,75.26,75.88,76.4,76.85,77.22,77.55,77.82,78.05,78.25,78.42,78.56,78.68,78.79,78.87,78.95,79.01,79.06,79.11,79.15,79.18,79.21,79.23,79.25,78.31,77.38,76.48,76.91,77.28,77.59,77.86,76.96,76.19,75.29,74.75,74.12,73.39,72.86,72.11,71.62,72.42,72.9,73.3,73.72,74.2,74.56,74.92,75.27,75.48,74.51,73.7,73.08,72.35,71.82,71.36,71.03,70.66,70.45,70.26,70.13,70.18,70.27,70.29,70.31,70.36,70.58,71.9,73.02,73.97,74.78,75.47,76.06,75.18,75.58,76.02,76.47,76.91,77.29,77.62,77.9,78.12,78.31,78.47,78.6,78.72,78.81,78.9,78.97,79.03,79.08,79.12,79.16,79.19,79.22,79.24,79.26,79.28,79.29,79.3,79.31,79.32,79.33,79.33,78.39,77.46,76.55,75.66,74.79,75.47,76.06,76.56,75.85,75.25,74.74,74.31,73.94,73.62,73.36,73.13,72.94,72.77,72.64,72.52,72.42,72.33,72.26,72.2,72.15,72.1,72.06,72.03,72.0,71.98,71.96,71.94,71.93,71.92,71.91,71.9,71.89,71.88,71.88,71.87,71.87,71.87,71.86,71.86,71.86,71.86,71.86,71.86,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.83,71.8,71.83,71.9,72.04,72.26,72.56,73.02,73.53,74.09,74.69,75.29,75.88,76.42,76.88,77.25,77.57,77.84,78.07,78.26,78.43,78.57,78.69,78.79,78.88,78.95,79.02,79.07,79.11,79.15,79.18,79.21,79.24,79.26,79.27,79.29,79.3,79.31,79.32,79.33,79.33,79.34,79.34,79.35,79.35,79.35,79.36,79.36,79.36,79.36,79.36,79.36,79.36,79.37,79.37,79.37,79.37,79.37,79.37,79.37,79.37,79.37,79.21,78.73,78.04,77.22,76.41,75.73,75.14,74.65,74.23,73.87,73.57,73.31,73.09,72.91,72.75,72.61,72.5,72.4,72.32,72.25,72.19,72.14,72.09,72.06,72.03,72.0,71.98,71.96,71.94,71.93,71.91,71.9,71.9,71.89,71.88,71.88,71.87,71.87,71.87,71.86,71.86,71.86,71.86,71.86,71.86,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.85,71.83,71.82,71.86,71.96,72.15,72.42,72.77,73.21,73.66,74.07,74.37,74.71,75.04,74.18,73.33,72.51,71.7,70.9,70.13,69.36,68.62,67.88,67.17,66.46,65.77,65.1,64.44,63.79,63.15,62.53,63.73,64.69,66.89,68.77,70.36,70.58,70.77,70.93,71.07,71.19,71.29,71.37,71.44,71.5,71.55,71.6,71.64,71.67,71.69,71.72,71.74,71.75,71.77,71.78,71.79,71.8,71.81,71.81,71.82,71.82,71.83,71.83,71.83,71.83,71.84,71.84,71.84,71.13,70.53,70.02,69.59,69.22,68.9,69.47,69.83,70.13,70.39,70.61,70.79,70.92,71.06,71.23,71.45,71.69,72.84,73.82,74.66,75.36,75.96,76.47,76.91,77.28,77.59,77.86,76.96,76.19,75.54,74.99,74.52,74.12,73.77,73.49,73.24,73.03,72.85,72.7,72.57,72.47,72.37,73.42,74.31,75.07,75.72,76.27,76.73,77.13,77.46,77.75,77.99,78.2,78.37,78.52,78.65,78.76,78.85,78.93,78.99,79.05,79.1,79.14,79.17,78.08,77.14,76.35,75.67,75.1,74.61,74.2,73.84,73.55,73.29,73.07,72.89,72.73,72.6,72.49,72.39,72.31,72.24,72.18,72.13,72.09,72.05,72.02,72.0,71.97,71.96,71.94,71.93,71.91,71.9,71.9,71.89,71.88,71.88,71.87,71.87,71.87,72.43,73.47,74.36,75.11,75.75,76.29,76.75,77.15,77.48,77.76,78.0,78.21,78.38,78.53,78.66,78.76,78.85,78.93,79.0,77.93,77.01,76.24,75.58,75.02,74.54,74.14,73.8,73.5,73.26,73.04,72.87,72.71,72.58,72.47,72.38,72.3,72.23,72.17,72.13,72.08,72.05,72.56,73.0,73.95,74.77,75.46,76.04,76.54,76.97,77.33,77.63,77.89,78.12,78.3,78.46,78.6,78.72,78.81,77.88,76.96,76.06,75.18,74.32,73.47,72.64,71.83,71.03,70.25,69.48,68.74,68.0,67.28,66.57,65.88,65.21,64.54,63.89,63.25,62.63,62.02,61.42,60.83,60.25,59.69,59.13,58.59,58.06,57.54,57.03,56.52,56.03,55.55,55.08,54.62,54.17,53.73,53.29,52.86]}};
+
+/* ── Color: diverging ramp, two poles through a neutral midpoint ──────────
+   Interpolation runs in linear-light sRGB so the midpoint doesn't muddy. */
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const hex2rgb = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+const toLin = c => { c/=255; return c<=.04045 ? c/12.92 : Math.pow((c+.055)/1.055,2.4); };
+const toSrgb = c => 255*(c<=.0031308 ? c*12.92 : 1.055*Math.pow(c,1/2.4)-.055);
+let RAMP = {};
+function loadRamp(){
+  RAMP = { neg: hex2rgb(css('--neg')).map(toLin),
+           mid: hex2rgb(css('--mid')).map(toLin),
+           pos: hex2rgb(css('--pos')).map(toLin) };
+}
+function color(t){ // t in [-1, 1]
+  const a = RAMP.mid, b = t < 0 ? RAMP.neg : RAMP.pos, k = Math.min(1, Math.abs(t));
+  return 'rgb(' + a.map((v,i) => Math.round(toSrgb(v + (b[i]-v)*k))).join(',') + ')';
+}
+
+/* ── State ───────────────────────────────────────────────────────────────── */
+const S = { view: 'model', m: 0, layer: null, role: null, curve: 'sqrt',
+            scale: 'tensor', cell: 14, pinned: null, pinnedEl: null };
+const $ = id => document.getElementById(id);
+const model = () => DATA.models[S.m];
+const layer = () => model().layers.find(l => l.id === S.layer);
+const tensor = () => layer().tensors.find(t => t.role === S.role);
+const fmt = (v, p = 5) => (v >= 0 ? ' ' : '') + v.toPrecision(p);
+
+/* Colour reference. p98 rather than the outright maximum: weight distributions
+   are sharply peaked at zero, so scaling to a lone outlier flattens the whole
+   field to grey. Values past the reference clip to the pole. */
+const refOf = t => t.stats.absP98 || t.stats.absMax || 1;
+function modelRef(){
+  return Math.max(...model().layers.flatMap(l => l.tensors.map(refOf)));
+}
+function scaleRef(){
+  return S.scale === 'tensor' ? refOf(tensor()) : modelRef();
+}
+function norm(v, ref){
+  const t = ref ? v / ref : 0;
+  return S.curve === 'sqrt' ? Math.sign(t) * Math.sqrt(Math.abs(t)) : t;
+}
+
+/* ── Masthead + tabs ─────────────────────────────────────────────────────── */
+function tabsHtml(){
+  return DATA.models.map((x, i) =>
+    `<button class="tab" role="tab" aria-selected="${S.view === 'model' && i === S.m}"
+     data-m="${i}">${x.name}</button>`).join('') +
+    `<button class="tab" role="tab" aria-selected="${S.view === 'personal'}"
+     data-m="p">Personalisation Layer</button>`;
+}
+
+function renderHeadPersonal(){
+  $('mTitle').textContent = 'Personalisation Layer';
+  $('mDesc').textContent =
+    'The adaptive half. The networks are frozen at export; per-wearer scoring is not.';
+  $('sParams').textContent = SESS.sessionFri;
+  $('sLayers').textContent = SESS.n.toLocaleString();
+  $('sSize').textContent = '0';
+  document.querySelectorAll('.stat .k')[0].textContent = 'recorded session FRI';
+  document.querySelectorAll('.stat .k')[1].textContent = 'real samples';
+  document.querySelectorAll('.stat .k')[2].textContent = 'network weights changed';
+  $('flow').innerHTML = ['observe', 'accumulate (Welford)', 'mature (blend)',
+    'personalise bands', 'score'].map((n, i) =>
+    `<div class="fnode${i === 3 ? ' weighted' : ''}"><div class="fs">${i + 1}</div>
+     <div class="fn">${n}</div></div>`).join('<span class="farrow">→</span>');
+  $('tabs').innerHTML = tabsHtml();
+  $('ioShape').textContent = 'stages';
+  $('layers').innerHTML = `<div style="padding:12px 13px">
+    <div class="eyebrow" style="margin-bottom:7px">Shipped guardrails</div>
+    <dl class="consts">${Object.entries(K).map(([k, v]) =>
+      `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+    <p class="note" style="margin:10px 0 0">Scraped at build time from
+      ${DATA.personalisation.source.join(' and ')}.</p></div>`;
+}
+
+function renderHead(){
+  if (S.view === 'personal') return renderHeadPersonal();
+  const m = model();
+  $('mTitle').textContent = m.name;
+  $('mDesc').textContent = m.description;
+  $('sParams').textContent = m.totalParams.toLocaleString();
+  $('sLayers').textContent = m.layers.filter(l => l.tensors.length).length;
+  $('sSize').textContent = (m.fileBytes / 1024).toFixed(1) + ' KB';
+  $('ioShape').textContent = m.inputShape.join('×');
+  $('tabs').innerHTML = tabsHtml();
+  document.querySelectorAll('.stat .k')[0].textContent = 'parameters';
+  document.querySelectorAll('.stat .k')[1].textContent = 'weighted layers';
+  document.querySelectorAll('.stat .k')[2].textContent = 'on flash';
+
+  // Data-flow strip — input shape, then the tensor shape after every stage.
+  const nodes = [{ s: m.inputShape.slice(1).join(' × '), n: 'input', w: false }].concat(
+    m.layers.map(l => ({ s: l.outShape.join(' × '), n: l.type === 'op' ? l.label.split(' ·')[0] : l.type,
+                         w: l.tensors.length > 0 })));
+  $('flow').innerHTML = nodes.map(nd =>
+    `<div class="fnode${nd.w ? ' weighted' : ''}"><div class="fs num">${nd.s}</div>
+     <div class="fn">${nd.n}</div></div>`).join('<span class="farrow">→</span>');
+}
+
+/* ── Layer stack ─────────────────────────────────────────────────────────── */
+function renderLayers(){
+  const ls = model().layers;
+  const counts = ls.map(l => l.tensors.reduce((a, t) => a + t.count, 0));
+  const peak = Math.max(...counts);   // bars are linear: they show where the
+                                      // parameter mass actually sits
+  const all = `<button class="layer" data-l="__all__" aria-current="${S.layer === '__all__'}">
+      <div class="lname">All layers at once</div>
+      <div class="lmeta"><span>every parameter on one screen</span>
+      <span class="num">${model().totalParams.toLocaleString()}</span></div></button>`;
+
+  $('layers').innerHTML = all + ls.map((l, i) => {
+    if (!l.tensors.length)
+      return `<div class="layer inert"><div class="lname">${l.label}</div>
+              <div class="lmeta"><span>${l.detail}</span></div></div>`;
+    return `<button class="layer" data-l="${l.id}" aria-current="${l.id === S.layer}">
+      <div class="lname">${l.label}</div>
+      <div class="lmeta"><span>${l.tensors.map(t => t.role).join(' · ')}</span>
+      <span class="num">${counts[i].toLocaleString()}</span></div>
+      <div class="pbar"><i style="width:${(counts[i] / peak * 100).toFixed(1)}%"></i></div></button>`;
+  }).join('');
+}
+
+/* ── Weight field ────────────────────────────────────────────────────────── */
+/* Draw one tensor's complete cell field. Shared by the single-layer view and
+   the all-layers wall, so both are guaranteed to render identical geometry. */
+function gridFor(l, t, ref){
+  const d = t.data;
+  const cellOf = (i) => `<div class="cell" data-i="${i}" style="background:${color(norm(d[i], ref))}"></div>`;
+  let html = '';
+
+  if (t.role === 'kernel' && l.grid && l.grid.mode === 'filters'){
+    // Conv1D kernel [filters, 1, timesteps, channels] — one tile per filter,
+    // each tile a timestep × sensor-channel receptive field.
+    const { filters, rows, cols } = l.grid;
+    const axis = l.colLabels
+      ? `<div class="axis-row">${l.colLabels.map(c => `<div class="axis-lbl">${c}</div>`).join('')}</div>` : '';
+    html = '<div class="tile-wrap">' + Array.from({ length: filters }, (_, f) => {
+      let g = '';
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) g += cellOf(f * rows * cols + r * cols + c);
+      return `<div class="tile"><div class="tile-cap">filter ${String(f).padStart(2,'0')}</div>
+        <div class="grid" style="grid-template-columns:repeat(${cols},var(--cell))">${g}</div>${axis}</div>`;
+    }).join('') + '</div>';
+
+  } else if (t.role === 'kernel' && l.grid && l.grid.mode === 'matrix'){
+    // Dense kernel [out, in] — rows are units, columns are incoming features.
+    const { rows, cols } = l.grid;
+    let g = '';
+    for (let i = 0; i < rows * cols; i++) g += cellOf(i);
+    const rl = l.rowLabels
+      ? `<div class="rowlbls" style="grid-template-rows:repeat(${rows},var(--cell))">${
+          l.rowLabels.map(x => `<div class="rowlbl">${x}</div>`).join('')}</div>` : '';
+    const axis = l.colLabels
+      ? `<div class="axis-row">${l.colLabels.map(c => `<div class="axis-lbl">${c}</div>`).join('')}</div>` : '';
+    html = `<div class="matrix-shell">${rl}<div><div class="grid"
+      style="grid-template-columns:repeat(${cols},var(--cell))">${g}</div>${axis}</div></div>`;
+
+  } else {
+    // 1-D vectors: bias, and the folded BatchNorm shift / scale / offset.
+    let g = '';
+    for (let i = 0; i < d.length; i++) g += cellOf(i);
+    const w = Math.min(d.length, 32);
+    html = `<div class="grid" style="grid-template-columns:repeat(${w},var(--cell))">${g}</div>`;
+  }
+  return html;
+}
+
+function renderField(){
+  const overview = S.layer === '__all__';
+  $('field').style.setProperty('--cell', (overview ? Math.min(S.cell, 10) : S.cell) + 'px');
+
+  if (overview){
+    const m = model(), ref = modelRef();
+    $('fTitle').textContent = 'Every parameter · ' + m.name;
+    $('fSub').textContent =
+      `all ${m.totalParams.toLocaleString()} weights of all ` +
+      `${m.layers.filter(l => l.tensors.length).length} weighted layers, drawn simultaneously`;
+    $('segTensor').innerHTML = '';
+
+    $('field').innerHTML = '<div class="wall">' + m.layers.filter(l => l.tensors.length).map(l => {
+      const n = l.tensors.reduce((a, t) => a + t.count, 0);
+      const boxes = l.tensors.map(t =>
+        `<div class="tenbox" data-l="${l.id}" data-r="${t.role}">
+           <div class="tl">${t.role} ${t.shapeNote}</div>${gridFor(l, t, ref)}</div>`).join('');
+      return `<div class="block"><div class="block-h"><span class="bt">${l.label}</span>
+        <span class="bm">${l.detail} · ${n.toLocaleString()} parameters</span></div>
+        <div class="tenset">${boxes}</div></div>`;
+    }).join('') + '</div>';
+
+    renderModelStats(ref);
+    return;
+  }
+
+  const l = layer(), t = tensor(), ref = scaleRef();
+  $('fTitle').textContent = l.label;
+  $('fSub').textContent = `${t.role} ${t.shapeNote} · ${t.count.toLocaleString()} values · ${l.detail}`;
+  $('segTensor').innerHTML = l.tensors.map(x =>
+    `<button data-r="${x.role}" aria-pressed="${x.role === S.role}">${x.role}</button>`).join('');
+  $('field').innerHTML = gridFor(l, t, ref);
+  renderStats(t, ref);
+}
+
+/* Overview stats: the distribution of every weight in the model at once. */
+function renderModelStats(ref){
+  const all = model().layers.flatMap(l => l.tensors.flatMap(t => t.data));
+  let mn = Infinity, mx = -Infinity, sum = 0;
+  for (const v of all){ if (v < mn) mn = v; if (v > mx) mx = v; sum += v; }
+  const mean = sum / all.length;
+  let sq = 0; for (const v of all) sq += (v - mean) ** 2;
+  renderStats({
+    role: 'model', count: all.length, data: all,
+    stats: { min: mn, max: mx, mean, std: Math.sqrt(sq / all.length), absMax: Math.max(-mn, mx) },
+  }, ref);
+}
+
+/* ── Distribution + legend + stats ───────────────────────────────────────── */
+function renderStats(t, ref){
+  const s = t.stats, B = 28;
+  const lo = Math.min(s.min, 0), hi = Math.max(s.max, 0), span = (hi - lo) || 1;
+  const bins = new Array(B).fill(0);
+  for (const v of t.data) bins[Math.min(B - 1, Math.floor((v - lo) / span * B))]++;
+  const peak = Math.max(...bins);
+  $('hist').innerHTML = bins.map((n, i) => {
+    const c = lo + (i + .5) / B * span;
+    return `<div class="hbar" title="${n} weights" style="height:${(n / peak * 100).toFixed(1)}%;
+      background:${color(norm(c, ref))}"></div>`;
+  }).join('');
+  $('hMin').textContent = lo.toFixed(2);
+  $('hMax').textContent = hi.toFixed(2);
+
+  const stops = Array.from({ length: 21 }, (_, i) => color(norm((i / 10 - 1) * ref, ref)));
+  $('legend').style.background = `linear-gradient(90deg,${stops.join(',')})`;
+  // Flag the clip explicitly — the ramp saturates before the true extremes.
+  const clipped = ref < s.absMax - 1e-9;
+  $('lMin').textContent = (clipped ? '≤ −' : '−') + ref.toFixed(2);
+  $('lMax').textContent = (clipped ? '≥ ' : '') + ref.toFixed(2);
+
+  $('tMean').textContent = fmt(s.mean, 3);
+  $('tStd').textContent  = fmt(s.std, 3);
+  $('tMin').textContent  = fmt(s.min, 3);
+  $('tMax').textContent  = fmt(s.max, 3);
+  $('tCount').textContent = t.count.toLocaleString() + ' / ' + t.count.toLocaleString();
+}
+
+/* ── Readout: resolve a flat index back to a named parameter ─────────────── */
+/* In the wall view a cell belongs to whichever tensor block contains it, so
+   context is read off the DOM rather than assumed from the selection. */
+function ctx(el){
+  const box = el.closest('[data-l][data-r]');
+  if (!box) return { l: layer(), t: tensor() };
+  const l = model().layers.find(x => x.id === box.dataset.l);
+  return { l, t: l.tensors.find(x => x.role === box.dataset.r) };
+}
+
+function describe(i, l, t){
+  const m = model(), g = l.grid;
+  const rows = [];
+  if (t.role === 'kernel' && g && g.mode === 'filters'){
+    const per = g.rows * g.cols, f = Math.floor(i / per), r = Math.floor((i % per) / g.cols), c = i % g.cols;
+    rows.push(['filter', f], ['timestep', 't' + r],
+              ['channel', l.colLabels ? l.colLabels[c] : c]);
+  } else if (t.role === 'kernel' && g && g.mode === 'matrix'){
+    const o = Math.floor(i / g.cols), c = i % g.cols;
+    rows.push(['unit', l.rowLabels ? l.rowLabels[o] : 'u' + o],
+              ['input', l.colLabels ? l.colLabels[c] : 'in' + c]);
+  } else {
+    // Bias / BatchNorm vectors are per-unit; name the unit where we know it.
+    const named = l.rowLabels && l.rowLabels[i];
+    rows.push([t.role === 'bias' ? 'unit' : 'channel', named || i]);
+  }
+  return `<b>${m.name}</b> › <b>${l.label}</b> › <b>${t.role}</b><br>` +
+         rows.map(([k, v]) => `${k} <b>${v}</b>`).join(' · ');
+}
+function showCell(i, el){
+  const { l, t } = ctx(el);
+  const ref = S.layer === '__all__' ? modelRef()
+            : (S.scale === 'tensor' ? refOf(t) : modelRef());
+  $('rVal').innerHTML = `<span class="swatch" style="background:${color(norm(t.data[i], ref))}"></span>${fmt(t.data[i])}`;
+  $('rPath').innerHTML = describe(i, l, t);
+}
+/* ══ Personalisation layer ═══════════════════════════════════════════════
+   The adaptive half of the system: the networks are frozen, but per-wearer
+   scoring is not. Every formula below is a direct transcription of
+   personal_norm_service.dart / personal_model_state.dart, driven by constants
+   scraped from those files at build time so the two cannot drift.
+   This panel renders MECHANISM, not a recorded wearer. */
+const K = DATA.personalisation.consts;
+// Slider baseline is the real recorded wearer, not an invented one.
+const PS0 = { n: 1, mean: Math.round(DATA.session.sessionFri), sd: 0 };
+const PS = { ...PS0 };
+
+/* personal_model_state.dart — blendWeight getter */
+function blendWeight(n){
+  if (n < K.kMinSessions) return 0;
+  if (n >= K.kFullSessions) return 1;
+  return (n - (K.kMinSessions - 1)) / (K.kFullSessions - (K.kMinSessions - 1));
+}
+/* personal_model_state.dart — maturity getter (drives the UI ring only) */
+const maturity = n => Math.min(1, n / K.kFullSessions);
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/* personal_norm_service.dart — buildNorms band edges, clamps included */
+function bands(n, mean, sdRaw){
+  const w = blendWeight(n);
+  const sd = Math.min(Math.max(K.sdAbsoluteFloorFri || 4.0,
+                               Math.abs(mean) * K.sdFloorFraction, sdRaw), K.friSdCeiling);
+  let pC = clamp(mean + 1 * sd, K.popCaution - K.bandDriftLimit,
+                 Math.min(K.popCaution + K.bandDriftLimit, K.cautionCeiling));
+  let pH = clamp(mean + 2 * sd, K.popHigh - K.bandDriftLimit,
+                 Math.min(K.popHigh + K.bandDriftLimit, K.highCeiling));
+  if (pH < pC + K.minBandWidth) pH = pC + K.minBandWidth;
+  return {
+    w, sd, pC, pH,
+    caution: (1 - w) * K.popCaution + w * pC,
+    high:    (1 - w) * K.popHigh    + w * pH,
+  };
+}
+
+/* Minimal SVG line chart. Thin marks, recessive grid, direct end-labels. */
+function lineChart({ w = 560, h = 150, xs, series, xTicks, yTicks, yMax = 1, xLab, yLab }){
+  const P = { l: 40, r: 78, t: 10, b: 26 };
+  const iw = w - P.l - P.r, ih = h - P.t - P.b;
+  const X = v => P.l + (v - xs[0]) / (xs[xs.length - 1] - xs[0]) * iw;
+  const Y = v => P.t + ih - (v / yMax) * ih;
+  let g = '';
+  for (const t of yTicks){
+    g += `<line class="gridline" x1="${P.l}" x2="${P.l + iw}" y1="${Y(t)}" y2="${Y(t)}"/>`;
+    g += `<text class="tick" x="${P.l - 6}" y="${Y(t) + 3}" text-anchor="end">${t}</text>`;
+  }
+  for (const t of xTicks)
+    g += `<text class="tick" x="${X(t)}" y="${h - 8}" text-anchor="middle">${t}</text>`;
+  g += `<line class="axline" x1="${P.l}" x2="${P.l + iw}" y1="${P.t + ih}" y2="${P.t + ih}"/>`;
+
+  for (const s of series){
+    const d = s.pts.map((p, i) => `${i ? 'L' : 'M'}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join('');
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2"
+          stroke-linejoin="round" stroke-dasharray="${s.dash || ''}"/>`;
+    const last = s.pts[s.pts.length - 1];
+    g += `<text class="serieslbl" x="${X(last[0]) + 7}" y="${Y(last[1]) + 3.5}"
+          fill="${s.color}">${s.name}</text>`;
+  }
+  if (xLab) g += `<text class="tick" x="${P.l + iw / 2}" y="${h - 8}" text-anchor="middle"
+                  style="opacity:0">${xLab}</text>`;
+  return `<div class="chart"><svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"
+          role="img" aria-label="${yLab || ''}">${g}</svg></div>`;
+}
+
+const SESS = DATA.session;
+
+/* Trace chart: every recorded sample, over the risk bands it was scored against. */
+function traceChart(vals, edges, { w = 640, h = 190 } = {}){
+  const P = { l: 34, r: 12, t: 8, b: 22 };
+  const iw = w - P.l - P.r, ih = h - P.t - P.b;
+  const X = i => P.l + i / (vals.length - 1) * iw;
+  const Y = v => P.t + ih - v / 100 * ih;
+  const band = (a, b, c) =>
+    `<rect x="${P.l}" y="${Y(b)}" width="${iw}" height="${Y(a) - Y(b)}" fill="${c}" opacity=".14"/>`;
+
+  let g = band(0, edges.caution, css('--safe'))
+        + band(edges.caution, edges.high, css('--caution'))
+        + band(edges.high, 100, css('--danger'));
+
+  for (const t of [0, 25, 50, 75, 100]){
+    g += `<line class="gridline" x1="${P.l}" x2="${P.l + iw}" y1="${Y(t)}" y2="${Y(t)}" opacity=".3"/>`;
+    g += `<text class="tick" x="${P.l - 6}" y="${Y(t) + 3}" text-anchor="end">${t}</text>`;
+  }
+  const d = vals.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  g += `<path d="${d}" fill="none" stroke="${css('--ink')}" stroke-width="1.1"
+        stroke-linejoin="round" opacity=".85"/>`;
+  g += `<line x1="${P.l}" x2="${P.l + iw}" y1="${Y(SESS.sessionFri)}" y2="${Y(SESS.sessionFri)}"
+        stroke="${css('--accent')}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  g += `<text class="serieslbl" x="${P.l + iw - 4}" y="${Y(SESS.sessionFri) - 5}"
+        text-anchor="end" fill="${css('--accent')}">session FRI ${SESS.sessionFri}</text>`;
+  g += `<text class="tick" x="${P.l}" y="${h - 6}">0</text>
+        <text class="tick" x="${P.l + iw}" y="${h - 6}" text-anchor="end">${vals.length} samples</text>`;
+  return `<div class="chart"><svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img"
+          aria-label="recorded fall risk index across the session">${g}</svg></div>`;
+}
+
+
+function renderPersonal(){
+  const ink = css('--ink-3'), acc = css('--accent'), dg = css('--danger');
+  const b = bands(PS.n, PS.mean, PS.sd);
+  const xs = Array.from({ length: 21 }, (_, i) => i);
+
+  const ramp = lineChart({
+    xs, yMax: 1, yTicks: [0, .5, 1], xTicks: [0, 5, 10, 15, 20], h: 120,
+    series: [
+      { name: 'blendWeight', color: acc, pts: xs.map(n => [n, blendWeight(n)]) },
+      { name: 'ring', color: ink, dash: '3 3', pts: xs.map(n => [n, maturity(n)]) },
+    ],
+    yLab: 'personalisation weight against session count',
+  });
+
+  const zs = Array.from({ length: 61 }, (_, i) => -3 + i * .1);
+  const anchorAt = Math.min(PS.mean, 100);
+  const anchor = lineChart({
+    xs: zs, yMax: 100, yTicks: [0, 50, 100], xTicks: [-3, -2, -1, 0, 1, 2, 3], h: 130,
+    series: [
+      { name: 'shipped', color: acc, pts: zs.map(z => [z, clamp(anchorAt + K.gainPerSd * z, 0, 100)]) },
+      { name: 'naive', color: dg, dash: '4 3', pts: zs.map(z => [z, clamp(50 + K.gainPerSd * z, 0, 100)]) },
+    ],
+    yLab: 'anchored versus naive personal sub-score',
+  });
+
+  const seg = (a, z, c, lbl) => `<div style="flex:${Math.max(z - a, .5)};background:${c}">${lbl}</div>`;
+  const row = (label, c, hgh) => `<div class="bandrow"><span class="bl">${label}</span>
+    <div class="bandbar">${seg(0, c, css('--safe'), 'Safe')}
+    ${seg(c, hgh, css('--caution'), 'Caution')}
+    ${seg(hgh, 100, css('--danger'), 'High')}</div>
+    <span class="num" style="font-size:11px;width:74px">${c.toFixed(1)} / ${hgh.toFixed(1)}</span></div>`;
+
+  const M = SESS.meta;
+  const kv = (k, v) => `<div class="kvb"><div class="kvk">${k}</div><div class="kvv num">${v}</div></div>`;
+
+  $('field').innerHTML = `<div class="pwrap">
+    <div class="prov"><b>${SESS.file}</b> · ${M.Date} · ${M.Duration} · ${M.Steps} steps ·
+      ${SESS.n.toLocaleString()} samples · real recording</div>
+
+    <div class="psec">
+      <h3>Recorded session</h3>
+      ${traceChart(SESS.fri, { caution: K.popCaution, high: K.popHigh })}
+      <div class="kvrow">${kv('session FRI', SESS.sessionFri)}${kv('peak', SESS.traceMax)}
+        ${kv('min', SESS.traceMin)}${kv('trace sd', SESS.traceSd.toFixed(2))}
+        ${kv('steps', M.Steps)}${kv('band', 'High Risk')}</div>
+    </div>
+
+    <div class="psec">
+      <h3>What this session contributes</h3>
+      <div class="kvrow">${kv('observations added', 1)}${kv('sessions held', 1)}
+        ${kv('raw sd', '0.00')}${kv('floored sd', (Math.max(K.sdAbsoluteFloorFri,
+          Math.abs(SESS.sessionFri) * K.sdFloorFraction)).toFixed(2))}
+        ${kv('blendWeight', blendWeight(1).toFixed(2))}
+        ${kv('scoring', 'population')}</div>
+      <p class="cap">One session, one observation. Personalisation stays inert until
+        session ${K.kMinSessions}.</p>
+    </div>
+
+    <div class="psec">
+      <h3>Maturity</h3>
+      ${ramp}
+    </div>
+
+    <div class="psec">
+      <h3>Band edges</h3>
+      <div class="sliders">
+        <div class="sl"><label for="pN">sessions</label>
+          <input type="range" id="pN" min="0" max="20" value="${PS.n}"><output>${PS.n}</output></div>
+        <div class="sl"><label for="pM">FRI mean</label>
+          <input type="range" id="pM" min="10" max="90" value="${PS.mean}"><output>${PS.mean}</output></div>
+        <div class="sl"><label for="pS">FRI sd</label>
+          <input type="range" id="pS" min="0" max="20" value="${PS.sd}"><output>${PS.sd}</output></div>
+        <div class="sl"><label>blendWeight</label><output>${b.w.toFixed(2)}</output></div>
+        <button class="reset" id="pReset">reset to recorded</button>
+      </div>
+      ${row('population', K.popCaution, K.popHigh)}
+      ${row('personalised', b.caution, b.high)}
+      <p class="cap">Sliders start at this wearer's recorded values. Edges clamp to
+        ±${K.bandDriftLimit} of population, hard-stopped at ${K.cautionCeiling} / ${K.highCeiling}.</p>
+    </div>
+
+    <div class="psec">
+      <h3>Anchoring</h3>
+      ${anchor}
+      <p class="cap">At this wearer's recorded ${SESS.sessionFri}, naive centring would move
+        them <b>${Math.abs(anchorAt - 50).toFixed(1)} points</b> toward Safe at every z.</p>
+    </div>
+  </div>`;
+
+  ['pN', 'pM', 'pS'].forEach((id, i) => {
+    const el = $(id);
+    el.oninput = () => { PS[['n', 'mean', 'sd'][i]] = +el.value; renderPersonal(); $(id).focus(); };
+  });
+  $('pReset').onclick = () => { Object.assign(PS, PS0); renderPersonal(); };
+}
+
+/* ── Wiring ──────────────────────────────────────────────────────────────── */
+function clearPin(){
+  S.pinned = null; S.pinnedEl = null;
+  $('pinHint').textContent = 'hover a cell';
+}
+function selectLayer(id){
+  S.layer = id;
+  if (id !== '__all__') S.role = layer().tensors[0].role;
+  clearPin();
+  renderLayers(); renderField();
+}
+/* The readout rail and the colour controls only mean anything for weights. */
+function chrome(on){
+  document.querySelector('.rail-r').style.display = on ? '' : 'none';
+  document.querySelector('.panel-h .ctl').style.display = on ? '' : 'none';
+  document.querySelector('main').style.gridTemplateColumns =
+    on ? '' : '236px minmax(0, 1fr)';
+}
+function selectModel(i){
+  S.view = 'model'; S.m = i;
+  chrome(true);
+  renderHead();
+  selectLayer('__all__');   // land on the complete field, not a single layer
+}
+function selectPersonal(){
+  S.view = 'personal';
+  clearPin();
+  chrome(false);
+  renderHead();
+  $('fTitle').textContent = 'Adaptive scoring';
+  $('fSub').textContent = 'mechanism transcribed from the shipped Dart source';
+  $('segTensor').innerHTML = '';
+  renderPersonal();
+}
+
+$('tabs').onclick = e => {
+  const b = e.target.closest('[data-m]');
+  if (!b) return;
+  if (b.dataset.m === 'p') selectPersonal(); else selectModel(+b.dataset.m);
+};
+$('layers').onclick = e => { const b = e.target.closest('[data-l]'); if (b) selectLayer(b.dataset.l); };
+$('segTensor').onclick = e => { const b = e.target.closest('[data-r]'); if (b){ S.role = b.dataset.r; clearPin(); renderField(); } };
+
+$('field').addEventListener('mousemove', e => {
+  const c = e.target.closest('.cell');
+  if (c && S.pinned === null) showCell(+c.dataset.i, c);
+});
+$('field').addEventListener('click', e => {
+  const c = e.target.closest('.cell');
+  if (!c) return;
+  const i = +c.dataset.i;
+  const same = S.pinned === i && S.pinnedEl === c;
+  S.pinned = same ? null : i;
+  S.pinnedEl = same ? null : c;
+  $('pinHint').textContent = S.pinned === null ? 'hover a cell' : 'pinned · click to release';
+  if (S.pinned !== null) showCell(i, c);
+  document.querySelectorAll('.cell.pin').forEach(x => x.classList.remove('pin'));
+  if (S.pinnedEl) S.pinnedEl.classList.add('pin');
+});
+
+const toggle = (onId, offId, key, onVal, offVal) => {
+  $(onId).onclick  = () => { S[key] = onVal;  $(onId).setAttribute('aria-pressed','true');  $(offId).setAttribute('aria-pressed','false'); renderField(); };
+  $(offId).onclick = () => { S[key] = offVal; $(offId).setAttribute('aria-pressed','true'); $(onId).setAttribute('aria-pressed','false');  renderField(); };
+};
+toggle('cvSqrt', 'cvLin', 'curve', 'sqrt', 'linear');
+toggle('scT', 'scM', 'scale', 'tensor', 'model');
+$('cellSize').oninput = e => { S.cell = +e.target.value; $('field').style.setProperty('--cell', S.cell + 'px'); };
+
+$('foot').innerHTML = `Every weight above is read directly out of the shipped
+  <code>.tflite</code> files by <code>extract_weights.py</code> — nothing is sampled,
+  summarised, or synthesised. Layer identity is recovered from the TFLite operator
+  graph, since the converter discards Keras layer names. Total across both models:
+  <b>${DATA.models.reduce((a, m) => a + m.totalParams, 0).toLocaleString()}</b> parameters.`;
+
+loadRamp();
+selectModel(0);
+
+/* Re-resolve the ramp if the viewer's OS theme flips under the page. Guarded:
+   the page must still render if the environment lacks matchMedia. */
+try {
+  matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', () => { loadRamp(); renderField(); });
+} catch (e) { /* non-fatal — ramp stays on the theme resolved at load */ }
+</script>
